@@ -9,7 +9,7 @@ locale. Tout fonctionne hors ligne, sur un seul PC.
 
 ## Prérequis
 
-- **Node.js 18 ou plus récent** (https://nodejs.org/). Le dossier `.tools/node`
+- **Node.js 20 ou plus récent** (https://nodejs.org/). Le dossier `.tools/node`
   fourni peut aussi être utilisé automatiquement sous Linux/macOS.
 
 ## Démarrage rapide
