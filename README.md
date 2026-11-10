@@ -18,9 +18,67 @@ locale. Tout fonctionne hors ligne, sur un seul PC.
 
 ---
 
+## 🟢 Installation de Node.js 20 (Étape obligatoire)
+
+Pour éviter les erreurs de compilation, vous devez installer **Node.js 20 LTS**. Voici les instructions selon votre système d'exploitation.
+
+### 🐧 Sur Linux (Debian / Ubuntu / Raspberry Pi OS)
+
+La méthode la plus propre et la plus flexible est d'utiliser `nvm` (Node Version Manager). Cela vous permet d'installer Node 20 sans toucher au Node système.
+
+1. **Installer nvm :**
+   ```bash
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+   ```
+
+2. **Recharger votre terminal** (ou fermer/rouvrir le terminal) :
+   ```bash
+   source ~/.bashrc
+   ```
+
+3. **Installer et activer Node.js 20 :**
+   ```bash
+   nvm install 20
+   nvm use 20
+   nvm alias default 20
+   ```
+
+4. **Vérifier la version :**
+   ```bash
+   node -v   # Doit afficher v20.x.x
+   ```
+
+> **Alternative (sans nvm) :** Si vous préférez utiliser le gestionnaire de paquets système, utilisez le dépôt officiel NodeSource :
+> ```bash
+> curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+> sudo apt install -y nodejs
+> ```
+
+### 🪟 Sur Windows
+
+1. Allez sur [nodejs.org](https://nodejs.org/).
+2. Téléchargez la version **LTS** (qui correspond à Node.js 20).
+3. Lancez l'installateur `.msi` et suivez les étapes (laissez les options par défaut, cela installera aussi `npm` et ajoutera Node au `PATH`).
+4. **Vérifiez l'installation** en ouvrant une nouvelle invite de commandes (`cmd`) ou PowerShell :
+   ```bat
+   node -v
+   ```
+   *Doit afficher `v20.x.x`.*
+
+### 🍎 Sur macOS
+
+1. Allez sur [nodejs.org](https://nodejs.org/).
+2. Téléchargez la version **LTS** (Node.js 20).
+3. Lancez le fichier `.pkg` et suivez les instructions.
+4. Vérifiez avec `node -v` dans le Terminal.
+
+> **Alternative recommandée sur macOS :** Utilisez `nvm` via Homebrew (`brew install nvm`) pour gérer plusieurs versions de Node.js.
+
+---
+
 ## 🚀 Installation sur une nouvelle machine (depuis GitHub)
 
-Si vous récupérez ce projet sur une nouvelle machine (PC, Mac ou Raspberry Pi), suivez ces étapes :
+Une fois Node.js 20 installé, suivez ces étapes pour récupérer et lancer l'application :
 
 1. **Cloner le dépôt :**
    ```bash
@@ -77,13 +135,8 @@ Farmotic tourne aussi sur un Raspberry Pi : la base SQLite est embarquée en Web
 
 ### Installation sur Raspberry Pi OS 64 bits
 
-Assurez-vous d'avoir Node.js 20+ (via NodeSource ou nvm) :
-```bash
-sudo apt update
-sudo apt install -y nodejs npm
-node -v # doit afficher v20 ou plus
-```
-Puis suivez les étapes d'installation standard ci-dessus.
+1. Assurez-vous d'avoir Node.js 20+ (voir la section "Installation de Node.js 20" ci-dessus, via `nvm` ou NodeSource).
+2. Puis suivez les étapes d'installation standard depuis GitHub.
 
 *Note sur les performances :* Sur un Pi, la compilation peut prendre plusieurs minutes et demande de la mémoire. Si elle échoue par manque de RAM, ajoutez du swap (`sudo dphys-swapfile setup`).
 
@@ -200,9 +253,4 @@ scripts/build.mjs   compilation de l'interface et du serveur
 - `lecteur` : consultation seule.
 
 Les comptes se gèrent dans *Utilisateurs* (visible par les administrateurs).
-```
 
-
-
----
-Powered by [DeepSeek Chat Exporter](https://deepseekchatexporter.com)
