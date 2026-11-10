@@ -86,10 +86,17 @@ Une fois Node.js 20 installé, suivez ces étapes pour récupérer et lancer l'a
    cd Farmotic
    ```
 
-2. **Installer les dépendances :**
-   *(Ne jamais utiliser `sudo` pour cette commande, sous peine de problèmes de permissions irréversibles sur le dossier `node_modules`)*
+2. **Lancer le script d'installation automatique :**
+   Ce script vérifie votre version de Node.js, installe les dépendances et compile l'application.
+   ```bash
+   ./install.sh
+   ```
+   *(Si vous avez une erreur "Permission denied", tapez d'abord `chmod +x install.sh`)*
+
+   **Alternative manuelle :** Si vous préférez faire les étapes une par une :
    ```bash
    npm install
+   npm run build
    ```
 
 3. **Lancer l'application :**
@@ -253,4 +260,18 @@ scripts/build.mjs   compilation de l'interface et du serveur
 - `lecteur` : consultation seule.
 
 Les comptes se gèrent dans *Utilisateurs* (visible par les administrateurs).
+```
+
+---
+
+### 📤 N'oubliez pas de mettre à jour GitHub
+
+Pour que ces changements soient disponibles sur les autres machines, pensez à les publier :
+
+```bash
+git add README.md install.sh
+git commit -m "Docs: Ajout du script install.sh et mise à jour des instructions"
+git push
+```
+
 
