@@ -1,0 +1,27 @@
+# 1. Dépendances (Le plus important !)
+node_modules/
+
+# 2. Dossiers de compilation et temporaires
+build/
+tmp/
+.freebuff/
+
+# 3. Base de données / Données locales
+data/
+
+# 4. Outils locaux spécifiques à votre machine
+.tools/
+
+# 5. Fichiers de configuration et secrets locaux
+.env
+config.local.json
+
+# 6. Système d'exploitation / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 7. Logs
+*.log
+npm-debug.log*

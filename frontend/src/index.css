@@ -1,0 +1,117 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-brand-50: #f2f8f4;
+  --color-brand-100: #e1f0e7;
+  --color-brand-200: #c4e1cf;
+  --color-brand-300: #97c9ab;
+  --color-brand-400: #63a97f;
+  --color-brand-500: #3f8b5e;
+  --color-brand-600: #2f7049;
+  --color-brand-700: #275a3c;
+  --color-brand-800: #214831;
+  --color-brand-900: #1c3b29;
+  --color-brand-950: #0e2117;
+
+  --color-canvas: #f6f7f3;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-slate-800 antialiased;
+  }
+
+  ::selection {
+    @apply bg-brand-200 text-brand-900;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,20,0.04)];
+  }
+
+  .card-pad {
+    @apply p-5 sm:p-6;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-slate-700;
+  }
+
+  .hint {
+    @apply mt-1 text-xs text-slate-500;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-sm {
+    @apply gap-1.5 px-3 py-1.5 text-xs;
+  }
+
+  .btn-primary {
+    @apply bg-brand-700 text-white shadow-sm hover:bg-brand-800 focus-visible:ring-brand-500/30;
+  }
+
+  .btn-secondary {
+    @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus-visible:ring-slate-300/50;
+  }
+
+  .btn-danger {
+    @apply bg-rose-600 text-white shadow-sm hover:bg-rose-700 focus-visible:ring-rose-500/30;
+  }
+
+  .btn-ghost {
+    @apply text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-300/50;
+  }
+
+  .btn-icon {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-300/50;
+  }
+
+  .th {
+    @apply whitespace-nowrap px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500;
+  }
+
+  .td {
+    @apply px-4 py-3 align-middle text-sm text-slate-700;
+  }
+
+  .table-row {
+    @apply border-t border-slate-100 transition hover:bg-slate-50/70;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-brand-100/80 transition hover:bg-white/10 hover:text-white;
+  }
+
+  .nav-item-active {
+    @apply bg-white/12 text-white shadow-inner;
+  }
+
+  .kpi-value {
+    @apply text-2xl font-bold tracking-tight text-slate-900;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
