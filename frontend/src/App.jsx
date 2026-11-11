@@ -7,7 +7,6 @@ import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Cycles from './pages/Cycles.jsx';
 import CycleDetail from './pages/CycleDetail.jsx';
-import Ventes from './pages/Ventes.jsx';
 import References from './pages/References.jsx';
 import Parametres from './pages/Parametres.jsx';
 import Utilisateurs from './pages/Utilisateurs.jsx';
@@ -68,7 +67,6 @@ export default function App() {
               <Route index element={<Dashboard />} />
               <Route path="cycles" element={<Cycles />} />
               <Route path="cycles/:id" element={<CycleDetail />} />
-              <Route path="cycles/:id/ventes" element={<Ventes />} />
               <Route path="references" element={<References />} />
               <Route path="parametres" element={<Parametres />} />
               <Route

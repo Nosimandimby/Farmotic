@@ -51,6 +51,7 @@ import {
   Tabs,
 } from '../components/ui.jsx';
 import { FormulaireCycle } from './Cycles.jsx';
+import VentesCycle from '../components/VentesCycle.jsx';
 import {
   aujourdhuiISO,
   formatDate,
@@ -203,7 +204,7 @@ const STATUTS_COMPARAISON = {
   non_comparable: { tone: 'neutral', label: 'Non comparable' },
 };
 
-function ResultatReelVsPrevisionnel({ cycleId, synthese, settings }) {
+function ResultatReelVsPrevisionnel({ synthese, settings, onVoirVentes }) {
   const { reel, projection, ventes, comparaison } = synthese;
   const nombreVentes = ventes?.nombre_ventes ?? 0;
   const beneficeReel = reel?.benefice_reel ?? 0;
@@ -285,22 +286,16 @@ function ResultatReelVsPrevisionnel({ cycleId, synthese, settings }) {
             title="Aucune vente enregistrée"
             description="Saisissez vos ventes pour comparer le bénéfice réel à la projection."
             action={
-              <Link
-                to={`/cycles/${cycleId}/ventes`}
-                className="btn btn-primary inline-flex items-center gap-2"
-              >
-                <Banknote size={16} strokeWidth={2.2} /> Saisir une vente
-              </Link>
+              <Button icon={Banknote} onClick={onVoirVentes}>
+                Saisir une vente
+              </Button>
             }
           />
         ) : (
           <div className="flex justify-end">
-            <Link
-              to={`/cycles/${cycleId}/ventes`}
-              className="btn btn-secondary inline-flex items-center gap-2"
-            >
-              <TrendingUp size={16} strokeWidth={2.2} /> Voir / gérer les ventes
-            </Link>
+            <Button variant="secondary" icon={TrendingUp} onClick={onVoirVentes}>
+              Voir / gérer les ventes
+            </Button>
           </div>
         )}
       </div>
@@ -665,13 +660,6 @@ export default function CycleDetail() {
               {cycle.statut === 'en_cours' ? 'En cours' : 'Terminé'}
             </Badge>
             {cycle.souche && <Badge tone="brand">{cycle.souche}</Badge>}
-            <Link
-              to={`/cycles/${id}/ventes`}
-              className="btn btn-secondary inline-flex items-center gap-2"
-            >
-              <Banknote size={16} strokeWidth={2.2} />
-              Ventes
-            </Link>
             <Button variant="secondary" icon={Pencil} onClick={() => setModaleEdition(true)}>
               Modifier
             </Button>
@@ -776,7 +764,11 @@ export default function CycleDetail() {
           <TarifPrixVenteMinimum cycleId={id} stats={stats} charges={charges} settings={settings} onRafraichir={() => rafraichir()} />
 
           {synthese && (
-            <ResultatReelVsPrevisionnel cycleId={id} synthese={synthese} settings={settings} />
+            <ResultatReelVsPrevisionnel
+              synthese={synthese}
+              settings={settings}
+              onVoirVentes={() => setOnglet('ventes')}
+            />
           )}
 
           <div className="grid gap-5 lg:grid-cols-2">
@@ -1437,6 +1429,15 @@ export default function CycleDetail() {
             )}
           </Card>
         </div>
+      )}
+
+      {onglet === 'ventes' && (
+        <VentesCycle
+          cycleId={id}
+          cycle={cycle}
+          synthese={synthese}
+          onRafraichir={async () => rafraichir()}
+        />
       )}
 
       <Modal

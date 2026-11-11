@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useState } from 'react';
 import {
-  ArrowLeft,
   Banknote,
   Pencil,
   Plus,
@@ -21,9 +19,7 @@ import {
   ConfirmDialog,
   EmptyState,
   Field,
-  Loading,
   Modal,
-  PageHeader,
   StatCard,
 } from '../components/ui.jsx';
 import {
@@ -208,46 +204,19 @@ function FormulaireVente({ vente, cycleId, onClose, onEnregistre }) {
           {formatMontant(montant, settings)}
         </p>
       </div>
+
+      {enCours && <p className="text-xs text-slate-500">Enregistrement…</p>}
     </form>
   );
 }
 
-export default function Ventes() {
-  const { id } = useParams();
+export default function VentesCycle({ cycleId, cycle, synthese, onRafraichir }) {
   const { settings } = useSettings();
   const toast = useToast();
 
-  const [cycle, setCycle] = useState(null);
-  const [synthese, setSynthese] = useState(null);
-  const [chargement, setChargement] = useState(true);
-  const [erreur, setErreur] = useState('');
-  const [version, setVersion] = useState(0);
   const [modale, setModale] = useState(null);
   const [aSupprimer, setASupprimer] = useState(null);
   const [suppression, setSuppression] = useState(false);
-
-  const rafraichir = () => setVersion((valeur) => valeur + 1);
-
-  useEffect(() => {
-    let actif = true;
-    setChargement(true);
-    Promise.all([api.get(`/cycles/${id}`), api.get(`/cycles/${id}/synthese`)])
-      .then(([cycleData, syntheseData]) => {
-        if (!actif) return;
-        setCycle(cycleData);
-        setSynthese(syntheseData);
-        setErreur('');
-      })
-      .catch((error) => {
-        if (actif) setErreur(error.message);
-      })
-      .finally(() => {
-        if (actif) setChargement(false);
-      });
-    return () => {
-      actif = false;
-    };
-  }, [id, version]);
 
   const supprimer = async () => {
     if (!aSupprimer) return;
@@ -256,7 +225,7 @@ export default function Ventes() {
       await api.del(`/ventes/${aSupprimer.id}`);
       toast('Vente supprimée.');
       setASupprimer(null);
-      rafraichir();
+      await onRafraichir();
     } catch (error) {
       toast(error.message, 'error');
     } finally {
@@ -264,19 +233,11 @@ export default function Ventes() {
     }
   };
 
-  if (chargement) return <Loading />;
-
-  if (erreur || !cycle || !synthese) {
+  if (!synthese) {
     return (
-      <div>
-        <Link
-          to="/cycles"
-          className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800"
-        >
-          <ArrowLeft size={15} /> Retour aux cycles
-        </Link>
-        <Alert tone="danger" title="Cycle indisponible">
-          {erreur || 'Ce cycle est introuvable.'}
+      <div className="mt-5">
+        <Alert tone="info" title="Synthèse indisponible">
+          Les ventes de ce cycle ne peuvent pas être affichées pour le moment.
         </Alert>
       </div>
     );
@@ -287,25 +248,22 @@ export default function Ventes() {
   const projection = synthese.projection;
   const comparaison = synthese.comparaison;
   const prixRevientKg = synthese.prix_revient?.kg ?? null;
-  const lectureSeule = cycle.statut === 'termine';
+  const lectureSeule = cycle?.statut === 'termine';
   const statut = STATUTS[comparaison?.statut] || null;
   const beneficeReel = reel?.benefice_reel ?? 0;
 
   return (
-    <div>
-      <Link
-        to={`/cycles/${id}`}
-        className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800"
-      >
-        <ArrowLeft size={15} /> Retour au cycle
-      </Link>
-
-      <PageHeader
-        eyebrow="Cycle d’élevage"
-        title={`Ventes — ${cycle.nom}`}
-        subtitle="Enregistrez les ventes réelles (client, poids, prix au kg) pour comparer le bénéfice obtenu au prévisionnel à J45."
-        actions={
-          <>
+    <div className="mt-5 space-y-5">
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-4">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">Ventes du cycle</h2>
+            <p className="text-xs text-slate-500">
+              Enregistrez les ventes réelles (client, poids, prix au kg) pour comparer le
+              bénéfice obtenu au prévisionnel à J45.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <Badge tone={lectureSeule ? 'neutral' : 'success'}>
               {lectureSeule ? 'Cycle terminé' : 'Cycle en cours'}
             </Badge>
@@ -314,18 +272,17 @@ export default function Ventes() {
                 Nouvelle vente
               </Button>
             )}
-          </>
-        }
-      />
-
-      {lectureSeule && (
-        <div className="mb-5">
-          <Alert tone="info" title="Cycle terminé">
-            Les ventes enregistrées restent consultables, mais la saisie est verrouillée.
-            Réouvrez le cycle pour ajouter une vente.
-          </Alert>
+          </div>
         </div>
-      )}
+        {lectureSeule && (
+          <div className="card-pad">
+            <Alert tone="info" title="Cycle terminé">
+              Les ventes enregistrées restent consultables, mais la saisie est verrouillée.
+              Réouvrez le cycle pour ajouter une vente.
+            </Alert>
+          </div>
+        )}
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -364,7 +321,7 @@ export default function Ventes() {
         />
       </div>
 
-      <Card className="mt-5">
+      <Card>
         <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 px-5 py-4">
           <div>
             <h2 className="text-base font-semibold text-slate-900">
@@ -436,7 +393,7 @@ export default function Ventes() {
         </div>
       </Card>
 
-      <Card className="mt-5">
+      <Card>
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <div>
             <h2 className="text-base font-semibold text-slate-900">Historique des ventes</h2>
@@ -577,10 +534,10 @@ export default function Ventes() {
         {modale && (
           <FormulaireVente
             vente={modale.vente}
-            cycleId={id}
+            cycleId={cycleId}
             onClose={() => setModale(null)}
             onEnregistre={async () => {
-              rafraichir();
+              await onRafraichir();
               toast(modale?.mode === 'edition' ? 'Vente mise à jour.' : 'Vente enregistrée.');
             }}
           />
