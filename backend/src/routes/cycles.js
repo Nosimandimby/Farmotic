@@ -138,13 +138,24 @@ router.get('/cycles/:id/serie', (req, res) => {
     )
     .all(cycle.id, parametre.id);
 
-  const references = cycle.souche
+  // Un cycle sans souche renseignée utilise quand même les références
+  // disponibles lorsqu'il n'existe qu'une seule souche : sans cela les écrans
+  // de saisie n'auraient aucune référence à comparer.
+  let souche = cycle.souche;
+  if (!souche) {
+    const souches = db
+      .prepare('SELECT DISTINCT souche FROM references_valeurs ORDER BY souche')
+      .all();
+    if (souches.length === 1) souche = souches[0].souche;
+  }
+
+  const references = souche
     ? db
         .prepare(
           `SELECT jour, valeur FROM references_valeurs
            WHERE souche = ? AND parametre_id = ? ORDER BY jour`,
         )
-        .all(cycle.souche, parametre.id)
+        .all(souche, parametre.id)
     : [];
 
   const points = new Map();
@@ -168,7 +179,7 @@ router.get('/cycles/:id/serie', (req, res) => {
       unite: parametre.unite,
       type_valeur: parametre.type_valeur,
     },
-    souche: cycle.souche,
+    souche,
     points: [...points.values()].sort((a, b) => a.jour - b.jour),
   });
 });

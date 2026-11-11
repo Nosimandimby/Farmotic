@@ -316,6 +316,7 @@ export default function CycleDetail() {
   const [charges, setCharges] = useState([]);
   const [synthese, setSynthese] = useState(null);
   const [series, setSeries] = useState({});
+  const [seriesParametres, setSeriesParametres] = useState({});
   const [souches, setSouches] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState('');
@@ -365,14 +366,21 @@ export default function CycleDetail() {
         const parametrePoids = parametresData.find((p) => p.nom === 'poids');
         const parametreAliment = parametresData.find((p) => p.nom === 'aliment');
 
-        const [seriePoids, serieAliment] = await Promise.all([
-          parametrePoids
-            ? api.get(`/cycles/${id}/serie?parametre_id=${parametrePoids.id}`)
-            : Promise.resolve(null),
-          parametreAliment
-            ? api.get(`/cycles/${id}/serie?parametre_id=${parametreAliment.id}`)
-            : Promise.resolve(null),
-        ]);
+        // Les séries portent la référence du jour : on les charge pour tous les
+        // paramètres actifs (plus poids et aliment) afin d'afficher la valeur de
+        // référence à côté de chaque saisie.
+        const parametresASerie = parametresData.filter(
+          (p) => p.actif || p.nom === 'poids' || p.nom === 'aliment',
+        );
+        const seriesListe = await Promise.all(
+          parametresASerie.map((p) =>
+            api.get(`/cycles/${id}/serie?parametre_id=${p.id}`).catch(() => null),
+          ),
+        );
+        const parParametre = {};
+        for (const serie of seriesListe) {
+          if (serie?.parametre) parParametre[serie.parametre.id] = serie;
+        }
 
         if (!actif) return;
         setCycle(cycleData);
@@ -382,7 +390,11 @@ export default function CycleDetail() {
         setCharges(chargesData);
         setSouches(souchesData);
         setSynthese(syntheseData);
-        setSeries({ poids: seriePoids, aliment: serieAliment });
+        setSeriesParametres(parParametre);
+        setSeries({
+          poids: parParametre[parametrePoids?.id] ?? null,
+          aliment: parParametre[parametreAliment?.id] ?? null,
+        });
         setErreur('');
       })
       .catch((error) => {
@@ -416,6 +428,75 @@ export default function CycleDetail() {
     const utilises = new Set(releves.map((releve) => releve.parametre_id));
     return parametres.filter((parametre) => utilises.has(parametre.id) || parametre.actif);
   }, [parametres, releves]);
+
+  // Les références de poids peuvent être exprimées en grammes ou en kilos selon
+  // la saisie faite dans « Références ». On déduit l'unité de la série : un
+  // poulet de chair ne pèse jamais 100 kg, donc une référence > 100 est en g.
+  const referencePoidsEnGrammes = useMemo(() => {
+    const parametrePoids = parametres.find((parametre) => parametre.nom === 'poids');
+    const points = parametrePoids
+      ? seriesParametres[parametrePoids.id]?.points || []
+      : [];
+    const maximum = points.reduce(
+      (valeurMax, point) =>
+        Number.isFinite(point.reference)
+          ? Math.max(valeurMax, Number(point.reference))
+          : valeurMax,
+      0,
+    );
+    return maximum > 100;
+  }, [parametres, seriesParametres]);
+
+  // Référence de chaque paramètre pour la date saisie, exprimée dans l'unité
+  // du relevé. Pour l'aliment, la référence est une quantité par sujet : la
+  // référence du jour est donc « référence unitaire × nombre de poulets vivants ».
+  const referencesDuJour = useMemo(() => {
+    if (!cycle || !dateSaisie) return {};
+    const jour = joursEntre(cycle.date_debut, dateSaisie) + 1;
+    const mortsCumules = mortalites
+      .filter((ligne) => ligne.jour_cycle <= jour)
+      .reduce((total, ligne) => total + (Number(ligne.nombre_morts) || 0), 0);
+    const vivants = Math.max(0, (Number(cycle.nombre_poussins) || 0) - mortsCumules);
+
+    const references = {};
+    for (const parametre of parametres) {
+      const points = seriesParametres[parametre.id]?.points || [];
+      const point = points.find((entree) => entree.jour === jour);
+      const unitaire =
+        point && Number.isFinite(point.reference) ? Number(point.reference) : null;
+      if (unitaire === null) continue;
+
+      const estAliment = parametre.nom === 'aliment';
+      const estPoids = parametre.nom === 'poids';
+
+      // Conversion g <-> kg pour que la référence s'affiche dans l'unité du relevé.
+      let valeurAffichee = unitaire;
+      let equivalence = null;
+      if (estPoids) {
+        const grammes = referencePoidsEnGrammes ? unitaire : unitaire * 1000;
+        valeurAffichee = parametre.unite === 'kg' ? grammes / 1000 : grammes;
+        if (parametre.unite === 'kg' && referencePoidsEnGrammes) {
+          equivalence = `${formatNombre(grammes, 0)} g`;
+        }
+      }
+
+      references[parametre.id] = {
+        unitaire: valeurAffichee,
+        vivants: estAliment ? vivants : null,
+        total: estAliment ? unitaire * vivants : null,
+        unite: parametre.unite || '',
+        equivalence,
+      };
+    }
+    return references;
+  }, [
+    cycle,
+    dateSaisie,
+    mortalites,
+    parametres,
+    seriesParametres,
+    referencePoidsEnGrammes,
+  ]);
 
   const joursReleves = useMemo(() => {
     const map = new Map();
@@ -979,14 +1060,33 @@ export default function CycleDetail() {
                   « Paramètres » pour saisir des relevés.
                 </Alert>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {parametresActifs.map((parametre) => (
-                    <Field
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {parametresActifs.map((parametre) => {
+                    const reference = referencesDuJour[parametre.id];
+                    const valeurReference =
+                      reference?.total !== null && reference?.total !== undefined
+                        ? reference.total
+                        : reference?.unitaire ?? null;
+                    const saisie = valeursSaisies[parametre.id];
+                    const nombreSaisi =
+                      saisie !== undefined && saisie !== '' && Number.isFinite(Number(saisie))
+                        ? Number(saisie)
+                        : null;
+                    const ecart =
+                      nombreSaisi !== null && valeurReference
+                        ? ((nombreSaisi - valeurReference) / valeurReference) * 100
+                        : null;
+
+                    return (
+                    <div
                       key={parametre.id}
-                      label={parametre.libelle}
-                      htmlFor={`param-${parametre.id}`}
+                      className="rounded-xl border border-slate-200 bg-white p-3.5"
                     >
-                      <div className="relative">
+                      <label className="label" htmlFor={`param-${parametre.id}`}>
+                        {parametre.libelle}
+                      </label>
+                      <div className="flex flex-wrap items-start gap-2">
+                      <div className="relative min-w-[120px] flex-1">
                         <input
                           id={`param-${parametre.id}`}
                           type={parametre.type_valeur === 'nombre' ? 'number' : 'text'}
@@ -1010,8 +1110,52 @@ export default function CycleDetail() {
                           </span>
                         )}
                       </div>
-                    </Field>
-                  ))}
+
+                      <div
+                        className={`min-w-[140px] flex-1 rounded-lg px-2.5 py-1.5 text-xs ${
+                          reference
+                            ? 'bg-brand-50/80 text-brand-800'
+                            : 'bg-slate-50 text-slate-400'
+                        }`}
+                      >
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-brand-700">
+                          Référence
+                        </p>
+                        {reference ? (
+                          <>
+                            <p className="font-semibold text-brand-900">
+                              {formatNombre(
+                                reference.total !== null ? reference.total : reference.unitaire,
+                                3,
+                              )}{' '}
+                              {reference.unite}
+                              {reference.equivalence ? ` (${reference.equivalence})` : ''}
+                            </p>
+                            {reference.total !== null && (
+                              <p className="text-[11px] text-brand-700">
+                                {formatNombre(reference.unitaire, 3)} {reference.unite}/sujet ×{' '}
+                                {formatNombre(reference.vivants, 0)} sujets
+                              </p>
+                            )}
+                            {ecart !== null && (
+                              <p
+                                className={`text-[11px] font-semibold ${
+                                  ecart >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                                }`}
+                              >
+                                Écart : {ecart >= 0 ? '+' : ''}
+                                {formatNombre(ecart, 1)} %
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-[11px]">Aucune référence pour ce jour</p>
+                        )}
+                      </div>
+                      </div>
+                    </div>
+                    );
+                  })}
                 </div>
               )}
 
