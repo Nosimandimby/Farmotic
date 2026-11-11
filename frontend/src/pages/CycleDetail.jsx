@@ -75,6 +75,20 @@ function joursEntre(dateA, dateB) {
   return Math.round((b - a) / 86400000);
 }
 
+// Exprime une référence dans l'unité du relevé (les références de poids peuvent
+// être stockées en grammes ou en kilogrammes).
+function normaliserReference(parametre, unitaire, referencePoidsEnGrammes) {
+  if (parametre.nom !== 'poids') return { valeur: unitaire, equivalence: null };
+  const grammes = referencePoidsEnGrammes ? unitaire : unitaire * 1000;
+  return {
+    valeur: parametre.unite === 'kg' ? grammes / 1000 : grammes,
+    equivalence:
+      parametre.unite === 'kg' && referencePoidsEnGrammes
+        ? `${formatNombre(grammes, 0)} g`
+        : null,
+  };
+}
+
 function CarteGraphique({ title, subtitle, meta, children, vide, messageVide }) {
   return (
     <Card>
@@ -467,23 +481,16 @@ export default function CycleDetail() {
       if (unitaire === null) continue;
 
       const estAliment = parametre.nom === 'aliment';
-      const estPoids = parametre.nom === 'poids';
-
-      // Conversion g <-> kg pour que la référence s'affiche dans l'unité du relevé.
-      let valeurAffichee = unitaire;
-      let equivalence = null;
-      if (estPoids) {
-        const grammes = referencePoidsEnGrammes ? unitaire : unitaire * 1000;
-        valeurAffichee = parametre.unite === 'kg' ? grammes / 1000 : grammes;
-        if (parametre.unite === 'kg' && referencePoidsEnGrammes) {
-          equivalence = `${formatNombre(grammes, 0)} g`;
-        }
-      }
+      const { valeur: valeurAffichee, equivalence } = normaliserReference(
+        parametre,
+        unitaire,
+        referencePoidsEnGrammes,
+      );
 
       references[parametre.id] = {
         unitaire: valeurAffichee,
         vivants: estAliment ? vivants : null,
-        total: estAliment ? unitaire * vivants : null,
+        total: estAliment ? valeurAffichee * vivants : null,
         unite: parametre.unite || '',
         equivalence,
       };
@@ -497,6 +504,53 @@ export default function CycleDetail() {
     seriesParametres,
     referencePoidsEnGrammes,
   ]);
+
+  // Références jour par jour pour colorer l'historique des relevés.
+  const referencesParJour = useMemo(() => {
+    const poussins = Number(cycle?.nombre_poussins) || 0;
+    const mortsParJour = new Map();
+    for (const ligne of mortalites) {
+      const jour = ligne.jour_cycle;
+      mortsParJour.set(
+        jour,
+        (mortsParJour.get(jour) || 0) + (Number(ligne.nombre_morts) || 0),
+      );
+    }
+    const mortsCumules = new Map();
+    let cumul = 0;
+    for (const jour of [...mortsParJour.keys()].sort((a, b) => a - b)) {
+      cumul += mortsParJour.get(jour);
+      mortsCumules.set(jour, cumul);
+    }
+    const vivantsAuJour = (jour) => {
+      let morts = 0;
+      for (const [jourMort, total] of mortsCumules) {
+        if (jourMort > jour) break;
+        morts = total;
+      }
+      return Math.max(0, poussins - morts);
+    };
+
+    const references = {};
+    for (const parametre of parametres) {
+      const points = seriesParametres[parametre.id]?.points || [];
+      const parJour = new Map();
+      for (const point of points) {
+        if (!Number.isFinite(point.reference)) continue;
+        const { valeur } = normaliserReference(
+          parametre,
+          Number(point.reference),
+          referencePoidsEnGrammes,
+        );
+        parJour.set(
+          point.jour,
+          parametre.nom === 'aliment' ? valeur * vivantsAuJour(point.jour) : valeur,
+        );
+      }
+      references[parametre.id] = parJour;
+    }
+    return references;
+  }, [cycle, mortalites, parametres, seriesParametres, referencePoidsEnGrammes]);
 
   const joursReleves = useMemo(() => {
     const map = new Map();
@@ -1184,8 +1238,11 @@ export default function CycleDetail() {
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">Historique des relevés</h2>
-                <p className="text-xs text-slate-500">
-                  {joursReleves.length} journée(s) enregistrée(s)
+                <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                  <span>{joursReleves.length} journée(s) enregistrée(s)</span>
+                  <span className="font-medium text-emerald-600">≥ supérieur à la référence</span>
+                  <span className="font-medium text-rose-600">≤ inférieur à la référence</span>
+                  <span className="font-medium text-slate-500">conforme en noir</span>
                 </p>
               </div>
             </div>
@@ -1220,11 +1277,38 @@ export default function CycleDetail() {
                           {formatDate(jour.date)}
                         </td>
                         <td className="td whitespace-nowrap text-slate-500">J{jour.jour}</td>
-                        {parametresTableau.map((parametre) => (
-                          <td key={parametre.id} className="td whitespace-nowrap">
-                            {jour.valeurs[parametre.id] ?? '—'}
-                          </td>
-                        ))}
+                        {parametresTableau.map((parametre) => {
+                          const valeur = jour.valeurs[parametre.id];
+                          const nombre = Number(String(valeur ?? '').replace(',', '.'));
+                          const reference =
+                            referencesParJour[parametre.id]?.get(jour.jour) ?? null;
+                          const comparable =
+                            valeur !== undefined &&
+                            valeur !== '' &&
+                            Number.isFinite(nombre) &&
+                            Number.isFinite(reference) &&
+                            reference !== 0;
+                          let classe = '';
+                          if (comparable) {
+                            const ecart = (nombre - reference) / reference;
+                            if (ecart > 0.005) classe = 'font-semibold text-emerald-600';
+                            else if (ecart < -0.005) classe = 'font-semibold text-rose-600';
+                            else classe = 'text-slate-800';
+                          }
+                          return (
+                            <td
+                              key={parametre.id}
+                              className={`td whitespace-nowrap ${classe}`}
+                              title={
+                                Number.isFinite(reference)
+                                  ? `Référence : ${formatNombre(reference, 3)} ${parametre.unite || ''}`
+                                  : undefined
+                              }
+                            >
+                              {valeur ?? '—'}
+                            </td>
+                          );
+                        })}
                         <td className="td">
                           <div className="flex items-center justify-end gap-1">
                             <button
