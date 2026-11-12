@@ -36,6 +36,9 @@ import {
 import { api } from '../api.js';
 import { useSettings } from '../context/SettingsContext.jsx';
 import { useToast } from '../components/Toast.jsx';
+import useOnlineStatus, {
+  MESSAGE_INDISPONIBLE_HORS_LIGNE,
+} from '../hooks/useOnlineStatus.js';
 import {
   Alert,
   Badge,
@@ -322,6 +325,7 @@ export default function CycleDetail() {
   const { settings } = useSettings();
   const toast = useToast();
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
 
   const [cycle, setCycle] = useState(null);
   const [parametres, setParametres] = useState([]);
@@ -795,10 +799,28 @@ export default function CycleDetail() {
               {cycle.statut === 'en_cours' ? 'En cours' : 'Terminé'}
             </Badge>
             {cycle.souche && <Badge tone="brand">{cycle.souche}</Badge>}
-            <Button variant="secondary" icon={Pencil} onClick={() => setModaleEdition(true)}>
+            <Button
+              variant="secondary"
+              icon={Pencil}
+              onClick={() => setModaleEdition(true)}
+              disabled={!isOnline}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Modifier le cycle'}
+            >
               Modifier
             </Button>
-            <Button variant="secondary" icon={cycle.statut === 'en_cours' ? CheckCircle2 : RotateCcw} onClick={basculerStatut}>
+            <Button
+              variant="secondary"
+              icon={cycle.statut === 'en_cours' ? CheckCircle2 : RotateCcw}
+              onClick={basculerStatut}
+              disabled={!isOnline}
+              title={
+                !isOnline
+                  ? MESSAGE_INDISPONIBLE_HORS_LIGNE
+                  : cycle.statut === 'en_cours'
+                    ? 'Marquer comme terminé'
+                    : 'Réouvrir le cycle'
+              }
+            >
               {cycle.statut === 'en_cours' ? 'Terminer' : 'Réouvrir'}
             </Button>
             <Button
@@ -806,6 +828,8 @@ export default function CycleDetail() {
               className="text-rose-600 hover:bg-rose-50"
               icon={Trash2}
               onClick={() => setConfirmationSuppression(true)}
+              disabled={!isOnline}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Supprimer le cycle'}
               aria-label="Supprimer le cycle"
             />
           </>
@@ -1227,7 +1251,12 @@ export default function CycleDetail() {
                 <p className="text-xs text-slate-500">
                   Laissez un champ vide pour ne pas enregistrer ce paramètre.
                 </p>
-                <Button type="submit" disabled={enregistrement} icon={Plus}>
+                <Button
+                  type="submit"
+                  disabled={enregistrement || !isOnline}
+                  icon={Plus}
+                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                >
                   {enregistrement ? 'Enregistrement…' : 'Enregistrer les relevés'}
                 </Button>
               </div>
@@ -1324,8 +1353,13 @@ export default function CycleDetail() {
                             </button>
                             <button
                               type="button"
-                              className="btn-icon hover:text-rose-600"
-                              title="Supprimer cette journée"
+                              className="btn-icon hover:text-rose-600 disabled:opacity-40"
+                              title={
+                                !isOnline
+                                  ? MESSAGE_INDISPONIBLE_HORS_LIGNE
+                                  : 'Supprimer cette journée'
+                              }
+                              disabled={!isOnline}
                               onClick={() => supprimerJour(jour.date)}
                             >
                               <Trash2 size={15} />
@@ -1393,7 +1427,13 @@ export default function CycleDetail() {
                 />
               </Field>
               <div className="flex gap-2">
-                <Button type="submit" className="flex-1" icon={mortEdition ? Pencil : Plus}>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  icon={mortEdition ? Pencil : Plus}
+                  disabled={!isOnline}
+                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                >
                   {mortEdition ? 'Mettre à jour' : 'Ajouter'}
                 </Button>
                 {mortEdition && (
@@ -1455,16 +1495,22 @@ export default function CycleDetail() {
                             <div className="flex justify-end gap-1">
                               <button
                                 type="button"
-                                className="btn-icon"
-                                title="Modifier"
+                                className="btn-icon disabled:opacity-40"
+                                title={
+                                  !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Modifier'
+                                }
+                                disabled={!isOnline}
                                 onClick={() => modifierMortalite(ligne)}
                               >
                                 <Pencil size={15} />
                               </button>
                               <button
                                 type="button"
-                                className="btn-icon hover:text-rose-600"
-                                title="Supprimer"
+                                className="btn-icon hover:text-rose-600 disabled:opacity-40"
+                                title={
+                                  !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Supprimer'
+                                }
+                                disabled={!isOnline}
                                 onClick={() => supprimerMortalite(ligne)}
                               >
                                 <Trash2 size={15} />
@@ -1557,7 +1603,13 @@ export default function CycleDetail() {
                 />
               </Field>
               <div className="flex gap-2">
-                <Button type="submit" className="flex-1" icon={chargeEdition ? Pencil : Plus}>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  icon={chargeEdition ? Pencil : Plus}
+                  disabled={!isOnline}
+                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                >
                   {chargeEdition ? 'Mettre à jour' : 'Ajouter la charge'}
                 </Button>
                 {chargeEdition && (
@@ -1622,16 +1674,22 @@ export default function CycleDetail() {
                           <div className="flex justify-end gap-1">
                             <button
                               type="button"
-                              className="btn-icon"
-                              title="Modifier"
+                              className="btn-icon disabled:opacity-40"
+                              title={
+                                !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Modifier'
+                              }
+                              disabled={!isOnline}
                               onClick={() => modifierCharge(charge)}
                             >
                               <Pencil size={15} />
                             </button>
                             <button
                               type="button"
-                              className="btn-icon hover:text-rose-600"
-                              title="Supprimer"
+                              className="btn-icon hover:text-rose-600 disabled:opacity-40"
+                              title={
+                                !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Supprimer'
+                              }
+                              disabled={!isOnline}
                               onClick={() => supprimerCharge(charge)}
                             >
                               <Trash2 size={15} />
@@ -1678,7 +1736,12 @@ export default function CycleDetail() {
             <Button variant="secondary" onClick={() => setModaleEdition(false)}>
               Annuler
             </Button>
-            <Button type="submit" form="formulaire-cycle">
+            <Button
+              type="submit"
+              form="formulaire-cycle"
+              disabled={!isOnline}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+            >
               Enregistrer
             </Button>
           </>

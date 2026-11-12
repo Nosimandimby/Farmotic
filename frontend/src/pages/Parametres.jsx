@@ -15,6 +15,9 @@ import { api } from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
 import { useToast } from '../components/Toast.jsx';
+import useOnlineStatus, {
+  MESSAGE_INDISPONIBLE_HORS_LIGNE,
+} from '../hooks/useOnlineStatus.js';
 import {
   Badge,
   Button,
@@ -174,6 +177,7 @@ export default function Parametres() {
   const { user } = useAuth();
   const { settings, refresh } = useSettings();
   const toast = useToast();
+  const isOnline = useOnlineStatus();
 
   const [onglet, setOnglet] = useState('suivi');
   const [parametres, setParametres] = useState([]);
@@ -296,7 +300,12 @@ export default function Parametres() {
         subtitle="Adaptez l’application à votre exploitation : paramètres de suivi, devise et compte."
         actions={
           onglet === 'suivi' ? (
-            <Button icon={Plus} onClick={() => setModale({ mode: 'creation' })}>
+            <Button
+              icon={Plus}
+              onClick={() => setModale({ mode: 'creation' })}
+              disabled={!isOnline}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer un paramètre'}
+            >
               Nouveau paramètre
             </Button>
           ) : null
@@ -348,7 +357,14 @@ export default function Parametres() {
                   title="Aucun paramètre"
                   description="Créez au moins un paramètre (poids, aliment…) pour saisir des relevés."
                   action={
-                    <Button icon={Plus} onClick={() => setModale({ mode: 'creation' })}>
+                    <Button
+                      icon={Plus}
+                      onClick={() => setModale({ mode: 'creation' })}
+                      disabled={!isOnline}
+                      title={
+                        !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer un paramètre'
+                      }
+                    >
                       Créer un paramètre
                     </Button>
                   }
@@ -394,7 +410,9 @@ export default function Parametres() {
                             role="switch"
                             aria-checked={Boolean(parametre.actif)}
                             onClick={() => basculerActif(parametre)}
-                            className={`inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 text-xs font-semibold transition ${
+                            disabled={!isOnline}
+                            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                            className={`inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 text-xs font-semibold transition disabled:opacity-50 ${
                               parametre.actif
                                 ? 'bg-emerald-50 text-emerald-700'
                                 : 'bg-slate-100 text-slate-500'
@@ -414,16 +432,22 @@ export default function Parametres() {
                           <div className="flex justify-end gap-1">
                             <button
                               type="button"
-                              className="btn-icon"
-                              title="Modifier"
+                              className="btn-icon disabled:opacity-40"
+                              title={
+                                !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Modifier'
+                              }
+                              disabled={!isOnline}
                               onClick={() => setModale({ mode: 'edition', parametre })}
                             >
                               <Pencil size={16} />
                             </button>
                             <button
                               type="button"
-                              className="btn-icon hover:text-rose-600"
-                              title="Supprimer"
+                              className="btn-icon hover:text-rose-600 disabled:opacity-40"
+                              title={
+                                !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Supprimer'
+                              }
+                              disabled={!isOnline}
                               onClick={() => setASupprimer(parametre)}
                             >
                               <Trash2 size={16} />
@@ -571,7 +595,12 @@ export default function Parametres() {
               </div>
 
               <div className="flex justify-end">
-                <Button type="submit" disabled={enregistrementPreferences} icon={Coins}>
+                <Button
+                  type="submit"
+                  disabled={enregistrementPreferences || !isOnline}
+                  icon={Coins}
+                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                >
                   {enregistrementPreferences ? 'Enregistrement…' : 'Enregistrer les préférences'}
                 </Button>
               </div>
@@ -668,7 +697,12 @@ export default function Parametres() {
                 </Field>
               </div>
               <div className="flex justify-end">
-                <Button type="submit" icon={KeyRound}>
+                <Button
+                  type="submit"
+                  icon={KeyRound}
+                  disabled={!isOnline}
+                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                >
                   Mettre à jour le mot de passe
                 </Button>
               </div>
@@ -713,7 +747,12 @@ export default function Parametres() {
             <Button variant="secondary" onClick={() => setModale(null)}>
               Annuler
             </Button>
-            <Button type="submit" form="formulaire-parametre">
+            <Button
+              type="submit"
+              form="formulaire-parametre"
+              disabled={!isOnline}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+            >
               {modale?.mode === 'edition' ? 'Enregistrer' : 'Créer le paramètre'}
             </Button>
           </>

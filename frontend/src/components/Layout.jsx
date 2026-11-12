@@ -13,6 +13,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
+import OfflineBanner from './OfflineBanner.jsx';
 import { formatDateLongue, aujourdhuiISO } from '../lib/format.js';
 
 const NAVIGATION = [
@@ -168,6 +169,8 @@ export default function Layout() {
             {initiales(user?.username)}
           </span>
         </header>
+
+        <OfflineBanner />
 
         <div className="hidden items-center justify-between gap-4 px-8 pt-6 text-xs text-slate-500 lg:flex">
           <span className="inline-flex items-center gap-2">

@@ -1,12 +1,53 @@
 const BASE = '/api';
 
+/** Erreur typée renvoyée lorsque l'application est hors-ligne. */
+export class ErreurHorsLigne extends Error {
+  constructor(message = 'Données non disponibles hors-ligne') {
+    super(message);
+    this.name = 'ErreurHorsLigne';
+    this.offline = true;
+  }
+}
+
+function estHorsLigne() {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
+
 async function request(path, { method = 'GET', body } = {}) {
-  const response = await fetch(`${BASE}${path}`, {
-    method,
-    credentials: 'include',
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  const lecture = method === 'GET';
+
+  // Une écriture ne peut pas aboutir hors-ligne : on échoue immédiatement avec
+  // un message clair plutôt que de laisser le navigateur expirer.
+  if (!lecture && estHorsLigne()) {
+    throw new ErreurHorsLigne(
+      'Action indisponible hors-ligne — consultation uniquement.',
+    );
+  }
+
+  let response;
+  try {
+    response = await fetch(`${BASE}${path}`, {
+      method,
+      credentials: 'include',
+      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (error) {
+    // Réseau coupé ou requête interrompue : les pages gardent les données déjà
+    // affichées (issues du cache du service worker) et peuvent afficher ce
+    // message.
+    if (lecture && estHorsLigne()) {
+      throw new ErreurHorsLigne();
+    }
+    const erreurReseau = new Error(
+      estHorsLigne()
+        ? 'Données non disponibles hors-ligne'
+        : 'Serveur injoignable. Vérifiez votre connexion puis réessayez.',
+    );
+    erreurReseau.offline = estHorsLigne();
+    erreurReseau.cause = error;
+    throw erreurReseau;
+  }
 
   const data = await response.json().catch(() => null);
 

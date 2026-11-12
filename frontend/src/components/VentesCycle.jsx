@@ -11,6 +11,9 @@ import {
 import { api } from '../api.js';
 import { useSettings } from '../context/SettingsContext.jsx';
 import { useToast } from '../components/Toast.jsx';
+import useOnlineStatus, {
+  MESSAGE_INDISPONIBLE_HORS_LIGNE,
+} from '../hooks/useOnlineStatus.js';
 import {
   Alert,
   Badge,
@@ -213,6 +216,7 @@ function FormulaireVente({ vente, cycleId, onClose, onEnregistre }) {
 export default function VentesCycle({ cycleId, cycle, synthese, onRafraichir }) {
   const { settings } = useSettings();
   const toast = useToast();
+  const isOnline = useOnlineStatus();
 
   const [modale, setModale] = useState(null);
   const [aSupprimer, setASupprimer] = useState(null);
@@ -268,7 +272,12 @@ export default function VentesCycle({ cycleId, cycle, synthese, onRafraichir }) 
               {lectureSeule ? 'Cycle terminé' : 'Cycle en cours'}
             </Badge>
             {!lectureSeule && (
-              <Button icon={Plus} onClick={() => setModale({ mode: 'creation' })}>
+              <Button
+                icon={Plus}
+                onClick={() => setModale({ mode: 'creation' })}
+                disabled={!isOnline}
+                title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Ajouter une vente'}
+              >
                 Nouvelle vente
               </Button>
             )}
@@ -412,7 +421,12 @@ export default function VentesCycle({ cycleId, cycle, synthese, onRafraichir }) 
               description="Ajoutez la première vente pour suivre le chiffre d’affaires réel du cycle."
               action={
                 !lectureSeule && (
-                  <Button icon={Plus} onClick={() => setModale({ mode: 'creation' })}>
+                  <Button
+                    icon={Plus}
+                    onClick={() => setModale({ mode: 'creation' })}
+                    disabled={!isOnline}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Ajouter une vente'}
+                  >
                     Ajouter une vente
                   </Button>
                 )
@@ -473,16 +487,22 @@ export default function VentesCycle({ cycleId, cycle, synthese, onRafraichir }) 
                             <>
                               <button
                                 type="button"
-                                className="btn-icon"
-                                title="Modifier"
+                                className="btn-icon disabled:opacity-40"
+                                title={
+                                  !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Modifier'
+                                }
+                                disabled={!isOnline}
                                 onClick={() => setModale({ mode: 'edition', vente })}
                               >
                                 <Pencil size={15} />
                               </button>
                               <button
                                 type="button"
-                                className="btn-icon hover:text-rose-600"
-                                title="Supprimer"
+                                className="btn-icon hover:text-rose-600 disabled:opacity-40"
+                                title={
+                                  !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Supprimer'
+                                }
+                                disabled={!isOnline}
                                 onClick={() => setASupprimer(vente)}
                               >
                                 <Trash2 size={15} />
@@ -525,7 +545,12 @@ export default function VentesCycle({ cycleId, cycle, synthese, onRafraichir }) 
             <Button variant="secondary" onClick={() => setModale(null)}>
               Annuler
             </Button>
-            <Button type="submit" form="formulaire-vente">
+            <Button
+              type="submit"
+              form="formulaire-vente"
+              disabled={!isOnline}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+            >
               {modale?.mode === 'edition' ? 'Enregistrer' : 'Ajouter la vente'}
             </Button>
           </>

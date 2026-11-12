@@ -11,6 +11,9 @@ import {
 import { api } from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../components/Toast.jsx';
+import useOnlineStatus, {
+  MESSAGE_INDISPONIBLE_HORS_LIGNE,
+} from '../hooks/useOnlineStatus.js';
 import {
   Alert,
   Badge,
@@ -178,6 +181,7 @@ function FormulaireUtilisateur({ utilisateur, onClose, onEnregistre }) {
 export default function Utilisateurs() {
   const { user } = useAuth();
   const toast = useToast();
+  const isOnline = useOnlineStatus();
 
   const [utilisateurs, setUtilisateurs] = useState([]);
   const [chargement, setChargement] = useState(true);
@@ -252,7 +256,12 @@ export default function Utilisateurs() {
         title="Utilisateurs"
         subtitle="Créez les comptes de l’exploitation et définissez ce que chacun peut faire."
         actions={
-          <Button icon={Plus} onClick={() => setModale({ mode: 'creation' })}>
+          <Button
+            icon={Plus}
+            onClick={() => setModale({ mode: 'creation' })}
+            disabled={!isOnline}
+            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer un compte'}
+          >
             Nouvel utilisateur
           </Button>
         }
@@ -299,7 +308,12 @@ export default function Utilisateurs() {
               title="Aucun compte"
               description="Créez un premier compte pour votre équipe."
               action={
-                <Button icon={Plus} onClick={() => setModale({ mode: 'creation' })}>
+                <Button
+                  icon={Plus}
+                  onClick={() => setModale({ mode: 'creation' })}
+                  disabled={!isOnline}
+                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer un compte'}
+                >
                   Créer un compte
                 </Button>
               }
@@ -341,7 +355,9 @@ export default function Utilisateurs() {
                           role="switch"
                           aria-checked={Boolean(compte.actif)}
                           onClick={() => basculerActif(compte)}
-                          className={`inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 text-xs font-semibold transition ${
+                          disabled={!isOnline}
+                          title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                          className={`inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 text-xs font-semibold transition disabled:opacity-50 ${
                             compte.actif
                               ? 'bg-emerald-50 text-emerald-700'
                               : 'bg-slate-100 text-slate-500'
@@ -364,8 +380,13 @@ export default function Utilisateurs() {
                         <div className="flex justify-end gap-1">
                           <button
                             type="button"
-                            className="btn-icon"
-                            title="Modifier ce compte"
+                            className="btn-icon disabled:opacity-40"
+                            title={
+                              !isOnline
+                                ? MESSAGE_INDISPONIBLE_HORS_LIGNE
+                                : 'Modifier ce compte'
+                            }
+                            disabled={!isOnline}
                             onClick={() => setModale({ mode: 'edition', utilisateur: compte })}
                           >
                             <Pencil size={16} />
@@ -374,11 +395,13 @@ export default function Utilisateurs() {
                             type="button"
                             className="btn-icon hover:text-rose-600 disabled:opacity-40"
                             title={
-                              soiMeme
-                                ? 'Vous ne pouvez pas supprimer votre propre compte'
-                                : 'Supprimer ce compte'
+                              !isOnline
+                                ? MESSAGE_INDISPONIBLE_HORS_LIGNE
+                                : soiMeme
+                                  ? 'Vous ne pouvez pas supprimer votre propre compte'
+                                  : 'Supprimer ce compte'
                             }
-                            disabled={soiMeme}
+                            disabled={soiMeme || !isOnline}
                             onClick={() => setASupprimer(compte)}
                           >
                             <Trash2 size={16} />
@@ -424,7 +447,12 @@ export default function Utilisateurs() {
             <Button variant="secondary" onClick={() => setModale(null)}>
               Annuler
             </Button>
-            <Button type="submit" form="formulaire-utilisateur">
+            <Button
+              type="submit"
+              form="formulaire-utilisateur"
+              disabled={!isOnline}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+            >
               {modale?.mode === 'edition' ? 'Enregistrer' : 'Créer le compte'}
             </Button>
           </>

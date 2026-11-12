@@ -25,6 +25,9 @@ import {
 } from 'lucide-react';
 import { api } from '../api.js';
 import { useSettings } from '../context/SettingsContext.jsx';
+import useOnlineStatus, {
+  MESSAGE_INDISPONIBLE_HORS_LIGNE,
+} from '../hooks/useOnlineStatus.js';
 import {
   Alert,
   Badge,
@@ -114,6 +117,7 @@ function CarteCycle({ cycle, settings }) {
 export default function Dashboard() {
   const { settings } = useSettings();
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
   const [data, setData] = useState(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState('');
@@ -166,7 +170,12 @@ export default function Dashboard() {
         title="Tableau de bord"
         subtitle="Suivez en un coup d’œil l’état de vos bandes, la mortalité et les coûts engagés."
         actions={
-          <Button icon={Plus} onClick={() => navigate('/cycles', { state: { nouveau: true } })}>
+          <Button
+            icon={Plus}
+            onClick={() => navigate('/cycles', { state: { nouveau: true } })}
+            disabled={!isOnline}
+            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer un cycle'}
+          >
             Nouveau cycle
           </Button>
         }
@@ -238,7 +247,12 @@ export default function Dashboard() {
                 title="Aucun cycle en cours"
                 description="Créez votre première bande pour commencer à enregistrer les relevés."
                 action={
-                  <Button icon={Plus} onClick={() => navigate('/cycles', { state: { nouveau: true } })}>
+                  <Button
+                    icon={Plus}
+                    onClick={() => navigate('/cycles', { state: { nouveau: true } })}
+                    disabled={!isOnline}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer un cycle'}
+                  >
                     Créer un cycle
                   </Button>
                 }

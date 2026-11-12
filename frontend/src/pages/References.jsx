@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import { api } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
+import useOnlineStatus, {
+  MESSAGE_INDISPONIBLE_HORS_LIGNE,
+} from '../hooks/useOnlineStatus.js';
 import {
   Alert,
   Badge,
@@ -32,6 +35,7 @@ import { formatNombre } from '../lib/format.js';
 
 export default function References() {
   const toast = useToast();
+  const isOnline = useOnlineStatus();
 
   const [souches, setSouches] = useState([]);
   const [parametres, setParametres] = useState([]);
@@ -211,6 +215,8 @@ export default function References() {
             variant="secondary"
             icon={Plus}
             onClick={() => setModaleSouche(true)}
+            disabled={!isOnline}
+            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer une souche'}
           >
             Nouvelle souche
           </Button>
@@ -269,7 +275,12 @@ export default function References() {
                 title="Aucune souche de référence"
                 description="Créez une souche puis saisissez ses objectifs de croissance."
                 action={
-                  <Button icon={Plus} onClick={() => setModaleSouche(true)}>
+                  <Button
+                    icon={Plus}
+                    onClick={() => setModaleSouche(true)}
+                    disabled={!isOnline}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer une souche'}
+                  >
                     Créer une souche
                   </Button>
                 }
@@ -302,6 +313,8 @@ export default function References() {
                             step="any"
                             aria-label={`Valeur du jour ${jour}`}
                             value={ligne?.valeur ?? ''}
+                            disabled={!isOnline}
+                            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
                             onChange={(event) =>
                               modifierLigne(jour, 'valeur', event.target.value)
                             }
@@ -314,6 +327,8 @@ export default function References() {
                             className="input py-1.5"
                             aria-label={`Note du jour ${jour}`}
                             value={ligne?.note ?? ''}
+                            disabled={!isOnline}
+                            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
                             onChange={(event) =>
                               modifierLigne(jour, 'note', event.target.value)
                             }
@@ -324,8 +339,13 @@ export default function References() {
                         <td className="td">
                           <button
                             type="button"
-                            className="btn-icon hover:text-rose-600"
-                            title="Supprimer ce jour"
+                            className="btn-icon hover:text-rose-600 disabled:opacity-40"
+                            title={
+                              !isOnline
+                                ? MESSAGE_INDISPONIBLE_HORS_LIGNE
+                                : 'Supprimer ce jour'
+                            }
+                            disabled={!isOnline}
                             onClick={() => ligne && supprimerLigne(ligne)}
                           >
                             <Trash2 size={15} />
@@ -420,7 +440,12 @@ export default function References() {
             <Button variant="secondary" onClick={() => setModaleSouche(false)}>
               Annuler
             </Button>
-            <Button type="submit" form="formulaire-souche">
+            <Button
+              type="submit"
+              form="formulaire-souche"
+              disabled={!isOnline}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+            >
               Créer
             </Button>
           </>
