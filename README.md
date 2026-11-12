@@ -167,12 +167,15 @@ After=network.target
 [Service]
 Type=simple
 User=pi
+Group=pi
 WorkingDirectory=/home/pi/Farmotic
-Environment=HOST=0.0.0.0
-Environment=PORT=3001
-Environment=FARMOTIC_NO_OPEN=1
-ExecStart=/usr/bin/env bash /home/pi/Farmotic/start.sh
+Environment="PATH=/home/pi/.nvm/versions/node/v20.20.2/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="NODE_ENV=production"
+ExecStart=/bin/bash /home/pi/Farmotic/start.sh
 Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
