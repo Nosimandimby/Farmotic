@@ -11,7 +11,9 @@ Fonctionnement : l'application est installée depuis un dépôt Git
 1. récupérer les nouveautés (`git fetch`),
 2. les appliquer en avance rapide (`git pull --ff-only`),
 3. réinstaller les dépendances Python si `requirements.txt` a changé,
-4. recompiler l'interface React si `frontend/` a changé (nécessite Node.js),
+4. réinstaller les dépendances (`npm ci` si `package-lock.json` a changé, sinon
+   `npm install`) et recompiler l'interface React si `frontend/` a changé
+   (nécessite Node.js),
 5. redémarrer le serveur (fait par l'appelant).
 """
 
@@ -33,6 +35,7 @@ RACINE = Path(__file__).resolve().parent
 FICHIER_VERSION = RACINE / "package.json"  # secours si l'installation n'est pas un dépôt Git
 DELAI_GIT = 60
 DELAI_INSTALLATION = 300
+DELAI_INSTALLATION_NODE = 1800
 DELAI_COMPILATION = 600
 
 
@@ -248,14 +251,99 @@ def _installer_dependances() -> str | None:
     return None
 
 
-def _recompiler_interface() -> str | None:
-    """Recompile l'interface React et alimente build/public."""
+def _version_node() -> str | None:
+    try:
+        resultat = subprocess.run(
+            ["node", "--version"], capture_output=True, text=True, timeout=15, cwd=RACINE
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return resultat.stdout.strip() or None
+
+
+def _node_trop_ancien(version: str | None) -> bool:
+    if not version:
+        return False
+    correspondance = re.match(r"v?(\d+)", version)
+    return bool(correspondance) and int(correspondance.group(1)) < 20
+
+
+def _executer_npm(arguments: list[str], delai: int) -> tuple[bool, str]:
+    """Exécute une commande npm ; renvoie (succès, dernier message d'erreur)."""
+    try:
+        resultat = subprocess.run(
+            ["npm", *arguments],
+            cwd=RACINE,
+            capture_output=True,
+            text=True,
+            timeout=delai,
+        )
+    except (OSError, subprocess.TimeoutExpired) as erreur:
+        return False, str(erreur)
+
+    if resultat.returncode == 0:
+        return True, ""
+
+    lignes = (resultat.stderr or resultat.stdout or "").strip().splitlines()
+    return False, (lignes[-1] if lignes else "erreur inconnue")
+
+
+def _installer_dependances_node(verrou_modifie: bool) -> str | None:
+    """Installe les dépendances de l'interface ; renvoie un avertissement si échec.
+
+    `npm ci` est utilisé quand `package-lock.json` a changé : installation
+    reproductible, exactement conforme au verrou. Il exige cependant un verrou
+    synchronisé avec `package.json` ; si ce n'est pas le cas, on retente avec
+    `npm install` plutôt que d'abandonner.
+    """
+    if verrou_modifie:
+        succes, detail = _executer_npm(
+            ["ci", "--no-audit", "--no-fund"], DELAI_INSTALLATION_NODE
+        )
+        if succes:
+            return None
+        succes, detail_install = _executer_npm(
+            ["install", "--no-audit", "--no-fund"], DELAI_INSTALLATION_NODE
+        )
+        if succes:
+            return None
+        return (
+            "Dépendances de l'interface non installées : `npm ci` puis "
+            f"`npm install` ont échoué ({detail_install or detail}). "
+            "L'ancienne interface reste affichée."
+        )
+
+    succes, detail = _executer_npm(
+        ["install", "--no-audit", "--no-fund"], DELAI_INSTALLATION_NODE
+    )
+    if succes:
+        return None
+    return (
+        f"Dépendances de l'interface non installées ({detail}). "
+        "L'ancienne interface reste affichée."
+    )
+
+
+def _recompiler_interface(fichiers: set[str]) -> str | None:
+    """Installe si nécessaire les dépendances puis recompile l'interface."""
     if not shutil.which("npm"):
         return (
             "Interface non recompilée : Node.js (npm) est introuvable sur cette "
             "machine. Installez Node.js 20+ puis relancez la mise à jour."
         )
 
+    verrou_modifie = bool(
+        fichiers & {"package-lock.json", "frontend/package-lock.json"}
+    )
+    dependances_modifiees = verrou_modifie or bool(
+        fichiers & {"package.json", "frontend/package.json"}
+    )
+    if dependances_modifiees or not (RACINE / "node_modules").is_dir():
+        avertissement = _installer_dependances_node(verrou_modifie)
+        if avertissement:
+            return avertissement
+
+    version_node = _version_node()
     commande = ["npm", "run", "build"]
     try:
         resultat = subprocess.run(
@@ -269,6 +357,12 @@ def _recompiler_interface() -> str | None:
         return f"Interface non recompilée ({erreur})."
 
     if resultat.returncode != 0:
+        if _node_trop_ancien(version_node):
+            return (
+                "Interface non recompilée : Node.js 20 ou plus récent est requis "
+                f"(version installée : {version_node}). Mettez Node.js à jour puis "
+                "relancez la mise à jour."
+            )
         lignes = (resultat.stderr or resultat.stdout or "").strip().splitlines()
         detail = lignes[-1] if lignes else "erreur inconnue"
         return f"Interface non recompilée ({detail})."
@@ -335,7 +429,7 @@ def appliquer_mise_a_jour(recompiler_interface: bool = True) -> dict[str, Any]:
         any(chemin.startswith("frontend/") for chemin in fichiers)
         or "package.json" in fichiers
     ):
-        avertissement = _recompiler_interface()
+        avertissement = _recompiler_interface(fichiers)
         if avertissement:
             avertissements.append(avertissement)
 

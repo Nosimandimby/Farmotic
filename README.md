@@ -171,7 +171,10 @@ Seule la commande de lancement change : `python3 lancer.py`.
 
 L'application est installée depuis le dépôt Git : mettre à jour consiste à
 récupérer les derniers commits, réinstaller les dépendances Python si
-`requirements.txt` a changé, recompiler l'interface si `frontend/` a changé, puis
+`requirements.txt` a changé, puis — si `frontend/` ou un fichier de dépendances
+a changé, ou si `node_modules/` est absent — installer les paquets npm (`npm ci`
+quand `package-lock.json` a changé, sinon `npm install --no-audit --no-fund`) et
+lancer `npm run build` (copie de `frontend/dist` vers `build/public`), et enfin
 redémarrer le serveur.
 
 ### Depuis l'application (recommandé)
