@@ -1,5 +1,9 @@
 # 1. Dépendances (Le plus important !)
 node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
 
 # 2. Dossiers de compilation et temporaires
 build/
