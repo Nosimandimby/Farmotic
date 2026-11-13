@@ -4,81 +4,26 @@ Application de suivi d'élevage de poulets de chair : cycles (bandes), relevés
 journaliers, mortalité, charges, références de croissance et indicateurs
 technico-économiques (indice de consommation, coût par kilo, marge).
 
-Interface React (Vite + Tailwind) et API Node.js/Express, avec une base SQLite
-locale. Tout fonctionne hors ligne, sur un seul PC.
+Interface React (Vite + Tailwind) et API **Python / FastAPI**, avec une base
+SQLite locale. Tout fonctionne hors ligne, sur un seul PC ou un Raspberry Pi,
+et l'application est installable en PWA sur Android.
 
 ---
 
 ## 🛠 Prérequis
 
-- **Node.js 20 ou plus récent** (https://nodejs.org/).
-  *⚠️ Attention : Les versions antérieures (v18 et moins) ne sont plus supportées par les dépendances de build (Vite, Tailwind) et provoqueront des erreurs `EBADENGINE` et des échecs de compilation.*
+- **Python 3.10 ou plus récent** (https://www.python.org/).
+  *Sur Debian / Ubuntu / Raspberry Pi OS : `sudo apt install -y python3 python3-venv python3-pip`.*
 - **Git** (pour cloner, maintenir et mettre à jour le projet).
-- **npm** (installé automatiquement avec Node.js).
+- **pip** (installé avec Python ; le lanceur s'en sert pour installer les dépendances).
 
----
-
-## 🟢 Installation de Node.js 20 (Étape obligatoire)
-
-Pour éviter les erreurs de compilation, vous devez installer **Node.js 20 LTS**. Voici les instructions selon votre système d'exploitation.
-
-### 🐧 Sur Linux (Debian / Ubuntu / Raspberry Pi OS)
-
-La méthode la plus propre et la plus flexible est d'utiliser `nvm` (Node Version Manager). Cela vous permet d'installer Node 20 sans toucher au Node système.
-
-1. **Installer nvm :**
-   ```bash
-   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
-   ```
-
-2. **Recharger votre terminal** (ou fermer/rouvrir le terminal) :
-   ```bash
-   source ~/.bashrc
-   ```
-
-3. **Installer et activer Node.js 20 :**
-   ```bash
-   nvm install 20
-   nvm use 20
-   nvm alias default 20
-   ```
-
-4. **Vérifier la version :**
-   ```bash
-   node -v   # Doit afficher v20.x.x
-   ```
-
-> **Alternative (sans nvm) :** Si vous préférez utiliser le gestionnaire de paquets système, utilisez le dépôt officiel NodeSource :
-> ```bash
-> curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-> sudo apt install -y nodejs
-> ```
-
-### 🪟 Sur Windows
-
-1. Allez sur [nodejs.org](https://nodejs.org/).
-2. Téléchargez la version **LTS** (qui correspond à Node.js 20).
-3. Lancez l'installateur `.msi` et suivez les étapes (laissez les options par défaut, cela installera aussi `npm` et ajoutera Node au `PATH`).
-4. **Vérifiez l'installation** en ouvrant une nouvelle invite de commandes (`cmd`) ou PowerShell :
-   ```bat
-   node -v
-   ```
-   *Doit afficher `v20.x.x`.*
-
-### 🍎 Sur macOS
-
-1. Allez sur [nodejs.org](https://nodejs.org/).
-2. Téléchargez la version **LTS** (Node.js 20).
-3. Lancez le fichier `.pkg` et suivez les instructions.
-4. Vérifiez avec `node -v` dans le Terminal.
-
-> **Alternative recommandée sur macOS :** Utilisez `nvm` via Homebrew (`brew install nvm`) pour gérer plusieurs versions de Node.js.
+Node.js n'est **pas** nécessaire pour faire tourner l'application : il ne sert
+que si vous souhaitez **recompiler l'interface React** (voir la section
+« Modifier l'interface »).
 
 ---
 
 ## 🚀 Installation sur une nouvelle machine (depuis GitHub)
-
-Une fois Node.js 20 installé, suivez ces étapes pour récupérer et lancer l'application :
 
 1. **Cloner le dépôt :**
    ```bash
@@ -86,73 +31,139 @@ Une fois Node.js 20 installé, suivez ces étapes pour récupérer et lancer l'a
    cd Farmotic
    ```
 
-2. **Lancer le script d'installation automatique :**
-   Ce script vérifie votre version de Node.js, installe les dépendances et compile l'application.
+2. **Installer les dépendances Python :**
    ```bash
-   ./install.sh
+   python3 -m pip install -r requirements.txt
    ```
-   *(Si vous avez une erreur "Permission denied", tapez d'abord `chmod +x install.sh`)*
 
-   **Alternative manuelle :** Si vous préférez faire les étapes une par une :
+   *Si votre système refuse l'installation globale (message « externally-managed-environment », PEP 668),
+   créez un environnement virtuel :*
    ```bash
-   npm install
-   npm run build
+   python3 -m venv .venv
+   ./.venv/bin/python -m pip install -r requirements.txt
    ```
+   *`lancer.py` fait ce repli automatiquement : vous pouvez aussi sauter cette étape et lancer
+   directement l'application, elle installera ce qui manque.*
 
 3. **Lancer l'application :**
-   | Système | Commande |
-   | --- | --- |
-   | Linux / macOS | `./start.sh` |
-   | Windows | double-clic sur `Demarrer-Farmotic.bat` |
+   ```bash
+   python3 lancer.py
+   ```
 
-Le script compile l'application si nécessaire (`build/`), démarre le serveur puis ouvre le navigateur sur http://127.0.0.1:3001.
+   Le serveur démarre sur **http://127.0.0.1:3001** et le navigateur s'ouvre
+   automatiquement. `lancer.py` vérifie les dépendances, les installe si besoin
+   (dans `.venv` en cas de blocage système), choisit le premier port libre à
+   partir de 3001, puis démarre Uvicorn.
 
 **Compte par défaut :** login `admin`, mot de passe `admin`.
 Pensez à le changer dans *Paramètres → Mon compte*.
 
 ---
 
-## 🔄 Mise à jour de l'application (Workflow Git)
+## 🎛 Options de lancement
 
-Lorsque vous modifiez le code sur votre machine de développement et que vous souhaitez publier une mise à jour, suivez ce cycle :
-
-### 1. Sur la machine de développement (Créer la mise à jour)
 ```bash
-git add .
-git commit -m "Description claire de la modification (ex: Fix: correction du calcul de mortalité)"
-git push
+python3 lancer.py                     # port 3001, navigateur ouvert
+PORT=3100 python3 lancer.py           # imposer le port
+HOST=0.0.0.0 python3 lancer.py        # accessible depuis le réseau local
+FARMOTIC_NO_OPEN=1 python3 lancer.py  # ne pas ouvrir le navigateur
+python3 lancer.py --no-open           # idem, en argument
 ```
 
-### 2. Sur les machines de production (Appliquer la mise à jour)
+`./start.sh` est conservé : il ne fait plus qu'appeler `lancer.py` (pratique
+pour les unités systemd et les habitudes).
+
+Sous Windows, ces variables s'utilisent dans l'invite de commandes :
+
+```bat
+set PORT=3100
+python lancer.py
+```
+
+---
+
+## 🖥 Modifier l'interface (recompilation du frontend)
+
+Le dossier `frontend/` n'a pas changé : c'est toujours React + Vite. Il faut
+Node.js 20+ **uniquement** pour recompiler l'interface après une modification.
+
 ```bash
-git pull
-# Si de nouvelles dépendances ont été ajoutées lors de la mise à jour :
+cd frontend
 npm install
-# Relancer l'application
-./start.sh
+npm run build
 ```
 
-> **⚠️ Règle d'or :** Ne modifiez jamais le code directement sur une machine de production. Centralisez toujours vos développements sur une seule machine, puis déployez via GitHub. Le dossier `data/` (base de données) est protégé et ne sera jamais écrasé par un `git pull`.
+Le build produit `frontend/dist/`, que le serveur Python sert automatiquement
+(il préfère `build/public` s'il existe). Aucune autre commande n'est requise :
+relancez `python3 lancer.py`.
+
+En développement, l'API Python et le serveur Vite (proxy `/api`) se lancent
+séparément :
+
+```bash
+python3 lancer.py --no-open     # API + interface compilée sur :3001
+cd frontend && npm run dev      # interface à chaud sur :5173
+```
+
+---
+
+## 💾 Données et sauvegarde
+
+- Base : **`data/database.sqlite`** — conservée **telle quelle** par la migration.
+  Mêmes tables, mêmes colonnes, mêmes types : aucun script de conversion n'est
+  nécessaire.
+- Secret de session : `data/session-secret.txt` (généré automatiquement, réutilisé
+  par le backend Python : les sessions existantes restent valides).
+- **Sauvegarde :** copiez le dossier `data/` (application arrêtée de préférence).
+  *Le dossier `data/` est ignoré par Git pour éviter d'écraser vos données de
+  production lors des mises à jour.*
+- Ancienne base Node.js : `data/database.nodejs.sqlite` est une sauvegarde de
+  la base d'avant la migration ; elle n'est utilisée que si
+  `data/database.sqlite` est absent au premier démarrage. Vous pouvez la
+  supprimer ou l'archiver une fois la migration confirmée.
+- Réinitialiser : fermez l'application et supprimez `data/database.sqlite`
+  (les comptes, cycles et relevés sont alors perdus).
+
+---
+
+## 🔄 Migration depuis l'ancienne version Node.js
+
+Rien à faire côté données : `main.py` lit et écrit la même base SQLite avec les
+mêmes requêtes SQL, expose exactement les mêmes routes `/api/…` avec les mêmes
+corps JSON, et signe le cookie `farmotic.sid` de la même manière. Les
+utilisateurs déjà connectés le restent après le basculement.
+
+Seule la commande de lancement change : `python3 lancer.py` (ou `./start.sh`).
 
 ---
 
 ## 🍓 Raspberry Pi (arm64) et autres machines
 
-Farmotic tourne aussi sur un Raspberry Pi : la base SQLite est embarquée en WebAssembly (`node-sqlite3-wasm`) et le mot de passe utilise `bcryptjs`, tous deux indépendants du processeur. Aucune compilation native n'est nécessaire.
+Farmotic tourne sur un Raspberry Pi sans compilation native : SQLite est fourni
+par Python, et `bcrypt` (vérification des mots de passe) est disponible en
+paquets précompilés pour arm64.
 
 ### Installation sur Raspberry Pi OS 64 bits
 
-1. Assurez-vous d'avoir Node.js 20+ (voir la section "Installation de Node.js 20" ci-dessus, via `nvm` ou NodeSource).
-2. Puis suivez les étapes d'installation standard depuis GitHub.
+1. Installez Python 3.10+ et les outils associés :
+   ```bash
+   sudo apt update
+   sudo apt install -y python3 python3-venv python3-pip git
+   ```
+2. Suivez ensuite les étapes d'installation standard depuis GitHub
+   (`python3 -m pip install -r requirements.txt` ou `python3 lancer.py`).
 
-*Note sur les performances :* Sur un Pi, la compilation peut prendre plusieurs minutes et demande de la mémoire. Si elle échoue par manque de RAM, ajoutez du swap (`sudo dphys-swapfile setup`).
+L'interface est déjà compilée dans le dépôt (`build/public`). Si vous modifiez
+React sur le Pi, faites-le plutôt sur un PC plus puissant : compiler Vite sur un
+Pi demande beaucoup de mémoire.
 
 ### Accès depuis un téléphone ou un autre poste
 
-Par défaut l'application n'écoute que sur la machine locale. Pour l'ouvrir depuis un autre appareil du réseau (utile dans un élevage) :
+Par défaut l'application n'écoute que sur la machine locale. Pour l'ouvrir depuis
+un autre appareil du réseau (utile dans un élevage) :
 
 ```bash
-HOST=0.0.0.0 ./start.sh
+HOST=0.0.0.0 python3 lancer.py
 # puis, depuis le téléphone : http://<adresse-ip-du-pi>:3001
 ```
 
@@ -169,9 +180,10 @@ Type=simple
 User=pi
 Group=pi
 WorkingDirectory=/home/pi/Farmotic
-Environment="PATH=/home/pi/.nvm/versions/node/v20.20.2/bin:/usr/local/bin:/usr/bin:/bin"
-Environment="NODE_ENV=production"
-ExecStart=/bin/bash /home/pi/Farmotic/start.sh
+Environment=HOST=0.0.0.0
+Environment=PORT=3001
+Environment=FARMOTIC_NO_OPEN=1
+ExecStart=/usr/bin/python3 /home/pi/Farmotic/lancer.py
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
@@ -187,71 +199,32 @@ sudo systemctl enable --now farmotic
 sudo systemctl status farmotic
 ```
 
-Sur un Pi sans écran, laissez `FARMOTIC_NO_OPEN=1` : le serveur démarre sans tenter d'ouvrir un navigateur.
+Sur un Pi sans écran, laissez `FARMOTIC_NO_OPEN=1` : le serveur démarre sans
+tenter d'ouvrir un navigateur.
 
 ---
 
-## ⚙️ Options utiles
+## 📱 PWA / installation sur Android
 
-```bash
-PORT=3100 ./start.sh          # imposer le port (sinon 3001, ou le suivant s'il est occupé)
-HOST=0.0.0.0 ./start.sh       # rendre l'application accessible aux autres appareils du réseau
-FARMOTIC_NO_OPEN=1 ./start.sh # ne pas ouvrir le navigateur
-```
-
-Sous Windows, ces variables s'utilisent dans l'invite de commandes :
-
-```bat
-set PORT=3100
-Demarrer-Farmotic.bat
-```
-
----
-
-## 💻 Mode développement
-
-```bash
-./dev.sh        # ou : npm run dev
-```
-
-- Interface : http://localhost:5173 (rechargement à chaud)
-- API : http://localhost:3001 (proxy `/api` configuré dans Vite)
-
----
-
-## 🔨 Compilation manuelle
-
-```bash
-npm install        # dépendances
-npm run build      # interface -> build/public, serveur -> build/farmotic.cjs
-npm start          # équivalent à : node build/farmotic.cjs
-```
-
-`npm run serve` démarre directement les sources (`backend/src/server.js`) sans compilation, à condition que l'interface soit déjà compilée.
-
----
-
-## 💾 Données et sauvegarde
-
-- Base : `data/database.sqlite` (créée et alimentée au premier démarrage).
-- Secret de session : `data/session-secret.txt` (généré automatiquement).
-- **Sauvegarde :** copiez le dossier `data/` (application arrêtée de préférence).
-  *Le dossier `data/` est ignoré par Git pour éviter d'écraser vos données de production lors des mises à jour.*
-- Réinitialiser : fermez l'application et supprimez `data/database.sqlite` (les comptes, cycles et relevés sont alors perdus).
+L'interface est une PWA (manifeste, icônes, service worker) : installation
+possible depuis Chrome et consultation hors-ligne des données déjà chargées.
+L'installation « native » exige **HTTPS** (ou `localhost`) : en HTTP simple,
+Chrome ne propose que « Ajouter à l'écran d'accueil ». Pour du HTTPS local,
+utilisez Caddy ou Nginx en reverse-proxy vers `http://localhost:3001`.
 
 ---
 
 ## 📂 Structure du projet
 
 ```
-backend/            API Express
-  src/server.js     démarrage, sessions, service de l'interface compilée
-  src/db.js         schéma SQLite, données de référence, comptes
-  src/routes/       routes /api (auth, cycles, relevés, mortalité, charges…)
+main.py             API FastAPI (toutes les routes /api + service de l'interface)
+lancer.py           lanceur : dépendances, port libre, Uvicorn, navigateur
+dev.sh              lancement en développement (API Python + Vite)
+start.sh            lanceur de compatibilité (délègue à lancer.py)
+requirements.txt    dépendances Python
 frontend/           interface React (src/) compilée dans dist/
-build/              application compilée prête à lancer (farmotic.cjs + public/)
+build/              interface compilée prête à servir (build/public)
 data/               base SQLite et secret de session (ignoré par Git)
-scripts/build.mjs   compilation de l'interface et du serveur
 ```
 
 ---
@@ -263,18 +236,25 @@ scripts/build.mjs   compilation de l'interface et du serveur
 - `lecteur` : consultation seule.
 
 Les comptes se gèrent dans *Utilisateurs* (visible par les administrateurs).
-```
 
 ---
 
-### 📤 N'oubliez pas de mettre à jour GitHub
+## 🧰 Dépannage
 
-Pour que ces changements soient disponibles sur les autres machines, pensez à les publier :
+| Symptôme | Solution |
+| --- | --- |
+| `externally-managed-environment` lors du `pip install` | Utilisez un venv (`python3 -m venv .venv`) ou laissez `lancer.py` le créer. |
+| `Port 3001 occupé` | `lancer.py` prend automatiquement le port suivant ; sinon `PORT=3100 python3 lancer.py`. |
+| « L'interface n'est pas compilée » | Le dossier `build/public` ou `frontend/dist` est absent : `cd frontend && npm install && npm run build`. |
+| Mot de passe oublié | Arrêtez l'application, renommez `data/database.sqlite`, relancez : un compte `admin`/`admin` est recréé (les données sont perdues). |
 
-```bash
-git add README.md install.sh
-git commit -m "Docs: Ajout du script install.sh et mise à jour des instructions"
-git push
-```
+---
 
+## 🧹 Ancien backend Node.js (supprimé)
 
+Le backend Express et ses outils ont été retirés du projet : plus de dossier
+`backend/`, de `scripts/build.mjs`, d'`install.sh` ni de bundle
+`build/farmotic.cjs`. Il ne reste côté Node que `frontend/` (Vite), nécessaire
+uniquement pour recompiler l'interface.
+
+Le lanceur Windows `Demarrer-Farmotic.bat` appelle désormais `lancer.py`.

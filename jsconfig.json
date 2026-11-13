@@ -9,6 +9,6 @@
     "allowJs": true,
     "resolveJsonModule": true
   },
-  "include": ["frontend/src", "backend/src", "scripts"],
+  "include": ["frontend/src"],
   "exclude": ["node_modules", "build", "frontend/dist"]
 }

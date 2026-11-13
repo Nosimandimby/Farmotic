@@ -4,21 +4,15 @@
   "private": true,
   "description": "Farmotic - suivi d'elevage de poulets de chair",
   "workspaces": [
-    "backend",
     "frontend"
   ],
   "scripts": {
-    "dev": "concurrently -n backend,frontend -c green,cyan \"npm:dev:backend\" \"npm:dev:frontend\"",
-    "dev:backend": "npm run dev --workspace backend",
+    "dev": "concurrently -n api,interface -c green,cyan \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "python3 lancer.py --dev --no-open",
     "dev:frontend": "npm run dev --workspace frontend",
-    "build": "npm run build:interface && npm run build:serveur",
-    "build:interface": "npm run build --workspace frontend",
-    "build:serveur": "node scripts/build.mjs",
-    "start": "node build/farmotic.cjs",
-    "serve": "node backend/src/server.js"
+    "build": "npm run build --workspace frontend"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2",
-    "esbuild": "^0.24.2"
+    "concurrently": "^9.1.2"
   }
 }
