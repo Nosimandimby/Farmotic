@@ -15,6 +15,7 @@ import { useToast } from '../components/Toast.jsx';
 import useOnlineStatus, {
   MESSAGE_INDISPONIBLE_HORS_LIGNE,
 } from '../hooks/useOnlineStatus.js';
+import usePeutModifier, { MESSAGE_LECTURE_SEULE } from '../hooks/usePermissions.js';
 import {
   Badge,
   Button,
@@ -178,6 +179,7 @@ export default function Cycles() {
   const navigate = useNavigate();
   const location = useLocation();
   const isOnline = useOnlineStatus();
+  const peutModifier = usePeutModifier();
 
   const [cycles, setCycles] = useState([]);
   const [souches, setSouches] = useState([]);
@@ -271,8 +273,8 @@ export default function Cycles() {
           <Button
             icon={Plus}
             onClick={() => setModale({ mode: 'creation' })}
-            disabled={!isOnline}
-            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer un cycle'}
+            disabled={!isOnline || !peutModifier}
+            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Créer un cycle'}
           >
             Nouveau cycle
           </Button>
@@ -328,8 +330,8 @@ export default function Cycles() {
                   <Button
                     icon={Plus}
                     onClick={() => setModale({ mode: 'creation' })}
-                    disabled={!isOnline}
-                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer un cycle'}
+                    disabled={!isOnline || !peutModifier}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Créer un cycle'}
                   >
                     Créer un cycle
                   </Button>
@@ -409,9 +411,9 @@ export default function Cycles() {
                           type="button"
                           className="btn-icon disabled:opacity-40"
                           title={
-                            !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Modifier'
+                            !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Modifier'
                           }
-                          disabled={!isOnline}
+                          disabled={!isOnline || !peutModifier}
                           onClick={() => setModale({ mode: 'edition', cycle })}
                         >
                           <Pencil size={16} />
@@ -426,7 +428,7 @@ export default function Cycles() {
                                 ? 'Marquer comme terminé'
                                 : 'Réouvrir le cycle'
                           }
-                          disabled={!isOnline}
+                          disabled={!isOnline || !peutModifier}
                           onClick={() => basculerStatut(cycle)}
                         >
                           {cycle.statut === 'en_cours' ? (
@@ -439,9 +441,9 @@ export default function Cycles() {
                           type="button"
                           className="btn-icon hover:text-rose-600 disabled:opacity-40"
                           title={
-                            !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Supprimer'
+                            !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Supprimer'
                           }
-                          disabled={!isOnline}
+                          disabled={!isOnline || !peutModifier}
                           onClick={() => setCycleASupprimer(cycle)}
                         >
                           <Trash2 size={16} />
@@ -473,8 +475,8 @@ export default function Cycles() {
             <Button
               type="submit"
               form="formulaire-cycle"
-              disabled={!isOnline}
-              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+              disabled={!isOnline || !peutModifier}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
             >
               {modale?.mode === 'edition' ? 'Enregistrer' : 'Créer le cycle'}
             </Button>

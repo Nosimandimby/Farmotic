@@ -794,6 +794,21 @@ def administrateur_requis(request: Request) -> dict[str, Any]:
     return utilisateur
 
 
+# Rôles autorisés à créer / modifier / supprimer des données. Le rôle
+# « lecteur » ne dispose que de la consultation.
+ROLES_ECRITURE = ("admin", "operateur")
+
+
+def ecriture_requise(request: Request) -> dict[str, Any]:
+    utilisateur = utilisateur_requis(request)
+    if utilisateur.get("role") not in ROLES_ECRITURE:
+        raise HTTPException(
+            status_code=403,
+            detail="Votre compte est en lecture seule : modification impossible.",
+        )
+    return utilisateur
+
+
 # --------------------------------------------------------------------------
 # Statistiques d'un cycle (reprises de l'ancien backend Node.js)
 # --------------------------------------------------------------------------
@@ -1169,7 +1184,7 @@ def lire_cycle(cycle_id: str, _: dict = Depends(session_requise)):
 @app.post("/api/cycles")
 def creer_cycle(
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     erreurs, data = valider_cycle(corps_json(body))
     if erreurs:
@@ -1196,7 +1211,7 @@ def creer_cycle(
 def modifier_cycle(
     cycle_id: str,
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     cycle = q1("SELECT * FROM cycles WHERE id = ?", (cycle_id,))
     if not cycle:
@@ -1229,7 +1244,7 @@ def modifier_cycle(
 
 @app.delete("/api/cycles/{cycle_id}")
 def supprimer_cycle(
-    cycle_id: str, _: dict = Depends(session_requise)
+    cycle_id: str, _: dict = Depends(ecriture_requise)
 ):
     cycle = q1("SELECT * FROM cycles WHERE id = ?", (cycle_id,))
     if not cycle:
@@ -1550,7 +1565,7 @@ def lister_parametres(
 @app.post("/api/parametres")
 def creer_parametre(
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     erreurs, data = valider_parametre(corps_json(body))
     if erreurs:
@@ -1583,7 +1598,7 @@ def creer_parametre(
 def modifier_parametre(
     parametre_id: str,
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     parametre = q1("SELECT * FROM parametres_reference WHERE id = ?", (parametre_id,))
     if not parametre:
@@ -1635,7 +1650,7 @@ def modifier_parametre(
 
 @app.delete("/api/parametres/{parametre_id}")
 def supprimer_parametre(
-    parametre_id: str, _: dict = Depends(session_requise)
+    parametre_id: str, _: dict = Depends(ecriture_requise)
 ):
     parametre = q1("SELECT * FROM parametres_reference WHERE id = ?", (parametre_id,))
     if not parametre:
@@ -1688,7 +1703,7 @@ def lister_references(
 @app.post("/api/references")
 def enregistrer_reference(
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     donnees = corps_json(body)
     souche = str(donnees.get("souche") or "").strip()
@@ -1734,7 +1749,7 @@ def enregistrer_reference(
 
 @app.delete("/api/references/{reference_id}")
 def supprimer_reference(
-    reference_id: str, _: dict = Depends(session_requise)
+    reference_id: str, _: dict = Depends(ecriture_requise)
 ):
     ligne = q1("SELECT * FROM references_valeurs WHERE id = ?", (reference_id,))
     if not ligne:
@@ -1790,7 +1805,7 @@ def lister_releves(
 @app.post("/api/releves")
 def creer_releve(
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     donnees = corps_json(body)
     cycle_id = entier(donnees.get("cycle_id"))
@@ -1836,7 +1851,7 @@ def creer_releve(
 @app.post("/api/releves/jour")
 def enregistrer_journee(
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     donnees = corps_json(body)
     cycle_id = entier(donnees.get("cycle_id"))
@@ -1904,7 +1919,7 @@ def enregistrer_journee(
 
 @app.delete("/api/releves/jour")
 def supprimer_journee(
-    request: Request, _: dict = Depends(session_requise)
+    request: Request, _: dict = Depends(ecriture_requise)
 ):
     cycle_id = entier(request.query_params.get("cycle_id"))
     une_date = str(request.query_params.get("date") or "")
@@ -1922,7 +1937,7 @@ def supprimer_journee(
 def modifier_releve(
     releve_id: str,
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     releve = q1("SELECT * FROM releves_journaliers WHERE id = ?", (releve_id,))
     if not releve:
@@ -1963,7 +1978,7 @@ def modifier_releve(
 
 @app.delete("/api/releves/{releve_id}")
 def supprimer_releve(
-    releve_id: str, _: dict = Depends(session_requise)
+    releve_id: str, _: dict = Depends(ecriture_requise)
 ):
     releve = q1("SELECT * FROM releves_journaliers WHERE id = ?", (releve_id,))
     if not releve:
@@ -2022,7 +2037,7 @@ def lister_mortalites(
 @app.post("/api/mortalites")
 def creer_mortalite(
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     donnees = corps_json(body)
     contexte = contexte_mortalite(donnees)
@@ -2050,7 +2065,7 @@ def creer_mortalite(
 def modifier_mortalite(
     mortalite_id: str,
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     ligne = q1("SELECT * FROM mortalites WHERE id = ?", (mortalite_id,))
     if not ligne:
@@ -2097,7 +2112,7 @@ def modifier_mortalite(
 
 @app.delete("/api/mortalites/{mortalite_id}")
 def supprimer_mortalite(
-    mortalite_id: str, _: dict = Depends(session_requise)
+    mortalite_id: str, _: dict = Depends(ecriture_requise)
 ):
     ligne = q1("SELECT * FROM mortalites WHERE id = ?", (mortalite_id,))
     if not ligne:
@@ -2169,7 +2184,7 @@ def lister_charges(
 @app.post("/api/charges")
 def creer_charge(
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     erreurs, data = valider_charge(corps_json(body))
     if erreurs:
@@ -2188,7 +2203,7 @@ def creer_charge(
 def modifier_charge(
     charge_id: str,
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     charge = q1("SELECT * FROM charges WHERE id = ?", (charge_id,))
     if not charge:
@@ -2228,7 +2243,7 @@ def modifier_charge(
 
 @app.delete("/api/charges/{charge_id}")
 def supprimer_charge(
-    charge_id: str, _: dict = Depends(session_requise)
+    charge_id: str, _: dict = Depends(ecriture_requise)
 ):
     charge = q1("SELECT * FROM charges WHERE id = ?", (charge_id,))
     if not charge:
@@ -2327,7 +2342,7 @@ def lister_ventes(
 @app.post("/api/ventes")
 def creer_vente(
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     erreurs, data = valider_vente(corps_json(body))
     if erreurs:
@@ -2356,7 +2371,7 @@ def creer_vente(
 def modifier_vente(
     vente_id: str,
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     vente = q1("SELECT * FROM ventes WHERE id = ?", (vente_id,))
     if not vente:
@@ -2416,7 +2431,7 @@ def modifier_vente(
 
 @app.delete("/api/ventes/{vente_id}")
 def supprimer_vente(
-    vente_id: str, _: dict = Depends(session_requise)
+    vente_id: str, _: dict = Depends(ecriture_requise)
 ):
     vente = q1("SELECT * FROM ventes WHERE id = ?", (vente_id,))
     if not vente:
@@ -2452,7 +2467,7 @@ def lire_settings(_: dict = Depends(session_requise)):
 @app.put("/api/settings")
 def modifier_settings(
     body: dict | None = Body(default=None),
-    _: dict = Depends(session_requise),
+    _: dict = Depends(ecriture_requise),
 ):
     actuel = normaliser_settings(get_settings())
     donnees = corps_json(body)

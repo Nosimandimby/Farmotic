@@ -28,6 +28,7 @@ import { useSettings } from '../context/SettingsContext.jsx';
 import useOnlineStatus, {
   MESSAGE_INDISPONIBLE_HORS_LIGNE,
 } from '../hooks/useOnlineStatus.js';
+import usePeutModifier, { MESSAGE_LECTURE_SEULE } from '../hooks/usePermissions.js';
 import {
   Alert,
   Badge,
@@ -118,6 +119,7 @@ export default function Dashboard() {
   const { settings } = useSettings();
   const navigate = useNavigate();
   const isOnline = useOnlineStatus();
+  const peutModifier = usePeutModifier();
   const [data, setData] = useState(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState('');
@@ -173,8 +175,8 @@ export default function Dashboard() {
           <Button
             icon={Plus}
             onClick={() => navigate('/cycles', { state: { nouveau: true } })}
-            disabled={!isOnline}
-            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer un cycle'}
+            disabled={!isOnline || !peutModifier}
+            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Créer un cycle'}
           >
             Nouveau cycle
           </Button>
@@ -250,8 +252,8 @@ export default function Dashboard() {
                   <Button
                     icon={Plus}
                     onClick={() => navigate('/cycles', { state: { nouveau: true } })}
-                    disabled={!isOnline}
-                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer un cycle'}
+                    disabled={!isOnline || !peutModifier}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Créer un cycle'}
                   >
                     Créer un cycle
                   </Button>

@@ -14,6 +14,7 @@ import { useToast } from '../components/Toast.jsx';
 import useOnlineStatus, {
   MESSAGE_INDISPONIBLE_HORS_LIGNE,
 } from '../hooks/useOnlineStatus.js';
+import usePeutModifier, { MESSAGE_LECTURE_SEULE } from '../hooks/usePermissions.js';
 import {
   Alert,
   Badge,
@@ -217,6 +218,7 @@ export default function VentesCycle({ cycleId, cycle, synthese, onRafraichir }) 
   const { settings } = useSettings();
   const toast = useToast();
   const isOnline = useOnlineStatus();
+  const peutModifier = usePeutModifier();
 
   const [modale, setModale] = useState(null);
   const [aSupprimer, setASupprimer] = useState(null);
@@ -275,8 +277,8 @@ export default function VentesCycle({ cycleId, cycle, synthese, onRafraichir }) 
               <Button
                 icon={Plus}
                 onClick={() => setModale({ mode: 'creation' })}
-                disabled={!isOnline}
-                title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Ajouter une vente'}
+                disabled={!isOnline || !peutModifier}
+                title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Ajouter une vente'}
               >
                 Nouvelle vente
               </Button>
@@ -424,8 +426,8 @@ export default function VentesCycle({ cycleId, cycle, synthese, onRafraichir }) 
                   <Button
                     icon={Plus}
                     onClick={() => setModale({ mode: 'creation' })}
-                    disabled={!isOnline}
-                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Ajouter une vente'}
+                    disabled={!isOnline || !peutModifier}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Ajouter une vente'}
                   >
                     Ajouter une vente
                   </Button>
@@ -489,9 +491,9 @@ export default function VentesCycle({ cycleId, cycle, synthese, onRafraichir }) 
                                 type="button"
                                 className="btn-icon disabled:opacity-40"
                                 title={
-                                  !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Modifier'
+                                  !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Modifier'
                                 }
-                                disabled={!isOnline}
+                                disabled={!isOnline || !peutModifier}
                                 onClick={() => setModale({ mode: 'edition', vente })}
                               >
                                 <Pencil size={15} />
@@ -500,9 +502,9 @@ export default function VentesCycle({ cycleId, cycle, synthese, onRafraichir }) 
                                 type="button"
                                 className="btn-icon hover:text-rose-600 disabled:opacity-40"
                                 title={
-                                  !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Supprimer'
+                                  !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Supprimer'
                                 }
-                                disabled={!isOnline}
+                                disabled={!isOnline || !peutModifier}
                                 onClick={() => setASupprimer(vente)}
                               >
                                 <Trash2 size={15} />
@@ -548,8 +550,8 @@ export default function VentesCycle({ cycleId, cycle, synthese, onRafraichir }) 
             <Button
               type="submit"
               form="formulaire-vente"
-              disabled={!isOnline}
-              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+              disabled={!isOnline || !peutModifier}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
             >
               {modale?.mode === 'edition' ? 'Enregistrer' : 'Ajouter la vente'}
             </Button>

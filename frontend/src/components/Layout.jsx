@@ -132,6 +132,7 @@ export default function Layout() {
               <p className="truncate text-sm font-semibold text-white">{user?.username}</p>
               <p className="text-[11px] text-brand-200/60">
                 {LIBELLES_ROLES[user?.role] || 'Éleveur'}
+                {user?.role === 'lecteur' ? ' · lecture seule' : ''}
               </p>
             </div>
             <button

@@ -20,6 +20,7 @@ import { useToast } from '../components/Toast.jsx';
 import useOnlineStatus, {
   MESSAGE_INDISPONIBLE_HORS_LIGNE,
 } from '../hooks/useOnlineStatus.js';
+import usePeutModifier, { MESSAGE_LECTURE_SEULE } from '../hooks/usePermissions.js';
 import {
   Alert,
   Badge,
@@ -36,6 +37,7 @@ import { formatNombre } from '../lib/format.js';
 export default function References() {
   const toast = useToast();
   const isOnline = useOnlineStatus();
+  const peutModifier = usePeutModifier();
 
   const [souches, setSouches] = useState([]);
   const [parametres, setParametres] = useState([]);
@@ -215,8 +217,8 @@ export default function References() {
             variant="secondary"
             icon={Plus}
             onClick={() => setModaleSouche(true)}
-            disabled={!isOnline}
-            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer une souche'}
+            disabled={!isOnline || !peutModifier}
+            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Créer une souche'}
           >
             Nouvelle souche
           </Button>
@@ -278,8 +280,8 @@ export default function References() {
                   <Button
                     icon={Plus}
                     onClick={() => setModaleSouche(true)}
-                    disabled={!isOnline}
-                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer une souche'}
+                    disabled={!isOnline || !peutModifier}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Créer une souche'}
                   >
                     Créer une souche
                   </Button>
@@ -313,8 +315,8 @@ export default function References() {
                             step="any"
                             aria-label={`Valeur du jour ${jour}`}
                             value={ligne?.valeur ?? ''}
-                            disabled={!isOnline}
-                            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                            disabled={!isOnline || !peutModifier}
+                            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
                             onChange={(event) =>
                               modifierLigne(jour, 'valeur', event.target.value)
                             }
@@ -327,8 +329,8 @@ export default function References() {
                             className="input py-1.5"
                             aria-label={`Note du jour ${jour}`}
                             value={ligne?.note ?? ''}
-                            disabled={!isOnline}
-                            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                            disabled={!isOnline || !peutModifier}
+                            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
                             onChange={(event) =>
                               modifierLigne(jour, 'note', event.target.value)
                             }
@@ -345,7 +347,7 @@ export default function References() {
                                 ? MESSAGE_INDISPONIBLE_HORS_LIGNE
                                 : 'Supprimer ce jour'
                             }
-                            disabled={!isOnline}
+                            disabled={!isOnline || !peutModifier}
                             onClick={() => ligne && supprimerLigne(ligne)}
                           >
                             <Trash2 size={15} />
@@ -443,8 +445,8 @@ export default function References() {
             <Button
               type="submit"
               form="formulaire-souche"
-              disabled={!isOnline}
-              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+              disabled={!isOnline || !peutModifier}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
             >
               Créer
             </Button>

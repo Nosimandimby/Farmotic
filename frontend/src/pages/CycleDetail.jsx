@@ -39,6 +39,7 @@ import { useToast } from '../components/Toast.jsx';
 import useOnlineStatus, {
   MESSAGE_INDISPONIBLE_HORS_LIGNE,
 } from '../hooks/useOnlineStatus.js';
+import usePeutModifier, { MESSAGE_LECTURE_SEULE } from '../hooks/usePermissions.js';
 import {
   Alert,
   Badge,
@@ -326,6 +327,7 @@ export default function CycleDetail() {
   const toast = useToast();
   const navigate = useNavigate();
   const isOnline = useOnlineStatus();
+  const peutModifier = usePeutModifier();
 
   const [cycle, setCycle] = useState(null);
   const [parametres, setParametres] = useState([]);
@@ -803,8 +805,8 @@ export default function CycleDetail() {
               variant="secondary"
               icon={Pencil}
               onClick={() => setModaleEdition(true)}
-              disabled={!isOnline}
-              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Modifier le cycle'}
+              disabled={!isOnline || !peutModifier}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Modifier le cycle'}
             >
               Modifier
             </Button>
@@ -812,7 +814,7 @@ export default function CycleDetail() {
               variant="secondary"
               icon={cycle.statut === 'en_cours' ? CheckCircle2 : RotateCcw}
               onClick={basculerStatut}
-              disabled={!isOnline}
+              disabled={!isOnline || !peutModifier}
               title={
                 !isOnline
                   ? MESSAGE_INDISPONIBLE_HORS_LIGNE
@@ -828,8 +830,8 @@ export default function CycleDetail() {
               className="text-rose-600 hover:bg-rose-50"
               icon={Trash2}
               onClick={() => setConfirmationSuppression(true)}
-              disabled={!isOnline}
-              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Supprimer le cycle'}
+              disabled={!isOnline || !peutModifier}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Supprimer le cycle'}
               aria-label="Supprimer le cycle"
             />
           </>
@@ -1253,9 +1255,9 @@ export default function CycleDetail() {
                 </p>
                 <Button
                   type="submit"
-                  disabled={enregistrement || !isOnline}
+                  disabled={enregistrement || !isOnline || !peutModifier}
                   icon={Plus}
-                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
                 >
                   {enregistrement ? 'Enregistrement…' : 'Enregistrer les relevés'}
                 </Button>
@@ -1359,7 +1361,7 @@ export default function CycleDetail() {
                                   ? MESSAGE_INDISPONIBLE_HORS_LIGNE
                                   : 'Supprimer cette journée'
                               }
-                              disabled={!isOnline}
+                              disabled={!isOnline || !peutModifier}
                               onClick={() => supprimerJour(jour.date)}
                             >
                               <Trash2 size={15} />
@@ -1431,8 +1433,8 @@ export default function CycleDetail() {
                   type="submit"
                   className="flex-1"
                   icon={mortEdition ? Pencil : Plus}
-                  disabled={!isOnline}
-                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                  disabled={!isOnline || !peutModifier}
+                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
                 >
                   {mortEdition ? 'Mettre à jour' : 'Ajouter'}
                 </Button>
@@ -1497,9 +1499,9 @@ export default function CycleDetail() {
                                 type="button"
                                 className="btn-icon disabled:opacity-40"
                                 title={
-                                  !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Modifier'
+                                  !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Modifier'
                                 }
-                                disabled={!isOnline}
+                                disabled={!isOnline || !peutModifier}
                                 onClick={() => modifierMortalite(ligne)}
                               >
                                 <Pencil size={15} />
@@ -1508,9 +1510,9 @@ export default function CycleDetail() {
                                 type="button"
                                 className="btn-icon hover:text-rose-600 disabled:opacity-40"
                                 title={
-                                  !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Supprimer'
+                                  !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Supprimer'
                                 }
-                                disabled={!isOnline}
+                                disabled={!isOnline || !peutModifier}
                                 onClick={() => supprimerMortalite(ligne)}
                               >
                                 <Trash2 size={15} />
@@ -1607,8 +1609,8 @@ export default function CycleDetail() {
                   type="submit"
                   className="flex-1"
                   icon={chargeEdition ? Pencil : Plus}
-                  disabled={!isOnline}
-                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                  disabled={!isOnline || !peutModifier}
+                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
                 >
                   {chargeEdition ? 'Mettre à jour' : 'Ajouter la charge'}
                 </Button>
@@ -1676,9 +1678,9 @@ export default function CycleDetail() {
                               type="button"
                               className="btn-icon disabled:opacity-40"
                               title={
-                                !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Modifier'
+                                !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Modifier'
                               }
-                              disabled={!isOnline}
+                              disabled={!isOnline || !peutModifier}
                               onClick={() => modifierCharge(charge)}
                             >
                               <Pencil size={15} />
@@ -1687,9 +1689,9 @@ export default function CycleDetail() {
                               type="button"
                               className="btn-icon hover:text-rose-600 disabled:opacity-40"
                               title={
-                                !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Supprimer'
+                                !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Supprimer'
                               }
-                              disabled={!isOnline}
+                              disabled={!isOnline || !peutModifier}
                               onClick={() => supprimerCharge(charge)}
                             >
                               <Trash2 size={15} />
@@ -1739,8 +1741,8 @@ export default function CycleDetail() {
             <Button
               type="submit"
               form="formulaire-cycle"
-              disabled={!isOnline}
-              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+              disabled={!isOnline || !peutModifier}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
             >
               Enregistrer
             </Button>

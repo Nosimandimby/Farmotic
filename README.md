@@ -312,11 +312,20 @@ data/               base SQLite et secret de session (ignoré par Git)
 
 ## 👥 Comptes et rôles
 
-- `admin` : accès complet, gestion des utilisateurs.
-- `operateur` : saisie et modification des cycles, relevés, charges.
-- `lecteur` : consultation seule.
+- `admin` : accès complet, gestion des utilisateurs, sauvegarde/restauration et
+  mises à jour.
+- `operateur` : tout le suivi d'élevage — cycles, relevés, mortalités, charges,
+  ventes, références, paramètres de suivi et préférences — **sans** la section
+  *Utilisateurs* ni les opérations système (sauvegarde/restauration, mises à
+  jour).
+- `lecteur` : consultation seule. Les boutons d'écriture sont désactivés dans
+  l'interface et l'API refuse toute création/modification/suppression
+  (`403 — Votre compte est en lecture seule : modification impossible.`).
 
 Les comptes se gèrent dans *Utilisateurs* (visible par les administrateurs).
+Les rôles sont vérifiés côté serveur : les dépendances `ecriture_requise`
+(admin + opérateur) et `administrateur_requis` (admin) protègent toutes les
+routes d'écriture.
 
 ---
 

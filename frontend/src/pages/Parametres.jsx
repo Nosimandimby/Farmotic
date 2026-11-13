@@ -26,6 +26,7 @@ import { useToast } from '../components/Toast.jsx';
 import useOnlineStatus, {
   MESSAGE_INDISPONIBLE_HORS_LIGNE,
 } from '../hooks/useOnlineStatus.js';
+import usePeutModifier, { MESSAGE_LECTURE_SEULE } from '../hooks/usePermissions.js';
 import {
   Badge,
   Button,
@@ -186,6 +187,7 @@ export default function Parametres() {
   const { settings, refresh } = useSettings();
   const toast = useToast();
   const isOnline = useOnlineStatus();
+  const peutModifier = usePeutModifier();
 
   const [onglet, setOnglet] = useState('suivi');
   const [parametres, setParametres] = useState([]);
@@ -429,8 +431,8 @@ export default function Parametres() {
             <Button
               icon={Plus}
               onClick={() => setModale({ mode: 'creation' })}
-              disabled={!isOnline}
-              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer un paramètre'}
+              disabled={!isOnline || !peutModifier}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Créer un paramètre'}
             >
               Nouveau paramètre
             </Button>
@@ -490,9 +492,9 @@ export default function Parametres() {
                     <Button
                       icon={Plus}
                       onClick={() => setModale({ mode: 'creation' })}
-                      disabled={!isOnline}
+                      disabled={!isOnline || !peutModifier}
                       title={
-                        !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Créer un paramètre'
+                        !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Créer un paramètre'
                       }
                     >
                       Créer un paramètre
@@ -540,8 +542,8 @@ export default function Parametres() {
                             role="switch"
                             aria-checked={Boolean(parametre.actif)}
                             onClick={() => basculerActif(parametre)}
-                            disabled={!isOnline}
-                            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                            disabled={!isOnline || !peutModifier}
+                            title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
                             className={`inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 text-xs font-semibold transition disabled:opacity-50 ${
                               parametre.actif
                                 ? 'bg-emerald-50 text-emerald-700'
@@ -564,9 +566,9 @@ export default function Parametres() {
                               type="button"
                               className="btn-icon disabled:opacity-40"
                               title={
-                                !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Modifier'
+                                !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Modifier'
                               }
-                              disabled={!isOnline}
+                              disabled={!isOnline || !peutModifier}
                               onClick={() => setModale({ mode: 'edition', parametre })}
                             >
                               <Pencil size={16} />
@@ -575,9 +577,9 @@ export default function Parametres() {
                               type="button"
                               className="btn-icon hover:text-rose-600 disabled:opacity-40"
                               title={
-                                !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : 'Supprimer'
+                                !isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : 'Supprimer'
                               }
-                              disabled={!isOnline}
+                              disabled={!isOnline || !peutModifier}
                               onClick={() => setASupprimer(parametre)}
                             >
                               <Trash2 size={16} />
@@ -727,9 +729,9 @@ export default function Parametres() {
               <div className="flex justify-end">
                 <Button
                   type="submit"
-                  disabled={enregistrementPreferences || !isOnline}
+                  disabled={enregistrementPreferences || !isOnline || !peutModifier}
                   icon={Coins}
-                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
                 >
                   {enregistrementPreferences ? 'Enregistrement…' : 'Enregistrer les préférences'}
                 </Button>
@@ -785,7 +787,7 @@ export default function Parametres() {
                     icon={Download}
                     onClick={exporterSauvegarde}
                     disabled={exportEnCours || !isOnline}
-                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
                   >
                     {exportEnCours ? 'Préparation…' : 'Télécharger la sauvegarde'}
                   </Button>
@@ -845,7 +847,7 @@ export default function Parametres() {
                     icon={Upload}
                     onClick={() => setConfirmationRestauration(true)}
                     disabled={!fichierSauvegarde || restaurationEnCours || !isOnline}
-                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
                   >
                     Restaurer les données
                   </Button>
@@ -947,7 +949,7 @@ export default function Parametres() {
                     icon={RefreshCw}
                     onClick={verifierMaj}
                     disabled={verificationMaj || !isOnline || redemarrage}
-                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
                   >
                     {verificationMaj ? 'Vérification…' : 'Vérifier les mises à jour'}
                   </Button>
@@ -956,7 +958,7 @@ export default function Parametres() {
                       icon={DownloadCloud}
                       onClick={() => setConfirmationMaj(true)}
                       disabled={applicationMaj || redemarrage || !isOnline}
-                      title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                      title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
                     >
                       {applicationMaj ? 'Installation…' : 'Mettre à jour'}
                     </Button>
@@ -1073,8 +1075,8 @@ export default function Parametres() {
                 <Button
                   type="submit"
                   icon={KeyRound}
-                  disabled={!isOnline}
-                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                  disabled={!isOnline || !peutModifier}
+                  title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
                 >
                   Mettre à jour le mot de passe
                 </Button>
@@ -1123,8 +1125,8 @@ export default function Parametres() {
             <Button
               type="submit"
               form="formulaire-parametre"
-              disabled={!isOnline}
-              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+              disabled={!isOnline || !peutModifier}
+              title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : !peutModifier ? MESSAGE_LECTURE_SEULE : undefined}
             >
               {modale?.mode === 'edition' ? 'Enregistrer' : 'Créer le paramètre'}
             </Button>
