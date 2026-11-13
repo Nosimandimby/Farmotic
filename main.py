@@ -29,6 +29,7 @@ import re
 import secrets
 import shutil
 import sqlite3
+import tempfile
 import threading
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
@@ -40,6 +41,7 @@ from urllib.parse import quote, unquote
 import bcrypt
 from fastapi import Body, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from starlette.background import BackgroundTask
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # --------------------------------------------------------------------------
@@ -89,15 +91,21 @@ DOSSIER_INTERFACE = _dossier_interface()
 
 _verrou = threading.RLock()
 
-_base = sqlite3.connect(
-    str(CHEMIN_BASE),
-    check_same_thread=False,
-    isolation_level=None,  # autocommit : les transactions sont explicites
-    timeout=5.0,
-)
-_base.row_factory = sqlite3.Row
-_base.execute("PRAGMA foreign_keys = ON")
-_base.execute("PRAGMA busy_timeout = 5000")
+
+def _ouvrir_connexion() -> sqlite3.Connection:
+    connexion = sqlite3.connect(
+        str(CHEMIN_BASE),
+        check_same_thread=False,
+        isolation_level=None,  # autocommit : les transactions sont explicites
+        timeout=5.0,
+    )
+    connexion.row_factory = sqlite3.Row
+    connexion.execute("PRAGMA foreign_keys = ON")
+    connexion.execute("PRAGMA busy_timeout = 5000")
+    return connexion
+
+
+_base = _ouvrir_connexion()
 
 
 def q(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
@@ -2670,6 +2678,144 @@ def supprimer_utilisateur(
 
     executer("DELETE FROM users WHERE id = ?", (cible["id"],))
     return reponse({"ok": True})
+
+
+# --------------------------------------------------------------------------
+# Sauvegarde et restauration de la base (administrateurs uniquement)
+# --------------------------------------------------------------------------
+
+TAILLE_MAX_SAUVEGARDE = 100 * 1024 * 1024  # 100 Mo
+
+TABLES_FARMOTIC = (
+    "users",
+    "sessions",
+    "cycles",
+    "mortalites",
+    "releves_journaliers",
+    "charges",
+    "ventes",
+    "parametres_reference",
+    "references_valeurs",
+    "settings",
+)
+
+
+def _nom_fichier_sauvegarde() -> str:
+    """Nom proposé à l'export : `farmotic-database-AAAA-MM-JJ.sqlite`."""
+    return f"farmotic-database-{datetime.now().strftime('%Y-%m-%d')}.sqlite"
+
+
+def _copier_base(destination: Path) -> None:
+    """Copie cohérente de la base ouverte (API backup de SQLite)."""
+    with _verrou:
+        copie = sqlite3.connect(str(destination))
+        try:
+            _base.backup(copie)
+        finally:
+            copie.close()
+
+
+@app.get("/api/sauvegarde")
+def exporter_sauvegarde(_: dict = Depends(administrateur_requis)):
+    """Télécharge une copie datée de la base SQLite."""
+    try:
+        descripteur, chemin = tempfile.mkstemp(
+            prefix="farmotic-sauvegarde-", suffix=".sqlite"
+        )
+        os.close(descripteur)
+        fichier = Path(chemin)
+        _copier_base(fichier)
+    except (OSError, sqlite3.Error) as exc:
+        print(f"Export de sauvegarde impossible : {exc!r}")
+        return erreur("Impossible de préparer la sauvegarde.", 500)
+
+    return FileResponse(
+        fichier,
+        media_type="application/vnd.sqlite3",
+        filename=_nom_fichier_sauvegarde(),
+        headers={"cache-control": "no-store"},
+        background=BackgroundTask(lambda: fichier.unlink(missing_ok=True)),
+    )
+
+
+@app.post("/api/sauvegarde/restauration")
+async def restaurer_sauvegarde(
+    request: Request, _: dict = Depends(administrateur_requis)
+):
+    """Remplace la base par un fichier `.sqlite` exporté précédemment."""
+    contenu = await request.body()
+    if not contenu:
+        return erreur("Aucun fichier reçu.", 400)
+    if len(contenu) > TAILLE_MAX_SAUVEGARDE:
+        return erreur("Fichier trop volumineux (100 Mo maximum).", 400)
+    if not contenu.startswith(b"SQLite format 3\x00"):
+        return erreur("Ce fichier n'est pas une base SQLite valide.", 400)
+
+    dossier_temporaire = Path(tempfile.mkdtemp(prefix="farmotic-restauration-"))
+    candidat = dossier_temporaire / "verification.sqlite"
+    try:
+        candidat.write_bytes(contenu)
+        controle = sqlite3.connect(str(candidat))
+        try:
+            tables = {
+                ligne[0]
+                for ligne in controle.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                )
+            }
+        finally:
+            controle.close()
+    except (OSError, sqlite3.Error) as exc:
+        print(f"Sauvegarde illisible : {exc!r}")
+        shutil.rmtree(dossier_temporaire, ignore_errors=True)
+        return erreur("Ce fichier n'est pas une base SQLite lisible.", 400)
+
+    manquantes = [table for table in TABLES_FARMOTIC if table not in tables]
+    if manquantes:
+        shutil.rmtree(dossier_temporaire, ignore_errors=True)
+        return erreur(
+            "Cette sauvegarde ne correspond pas à une base Farmotic "
+            f"(tables manquantes : {', '.join(manquantes)}).",
+            400,
+        )
+
+    global _base
+    horodatage = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+    securite = CHEMIN_BASE.parent / f"database-avant-restauration-{horodatage}.sqlite"
+
+    try:
+        with _verrou:
+            _copier_base(securite)
+            _base.close()
+            shutil.copyfile(candidat, CHEMIN_BASE)
+            _base = _ouvrir_connexion()
+            # Le fichier restauré peut avoir expiré les sessions en cours : on
+            # garde celle de l'administrateur qui effectue la restauration.
+            session = getattr(request.state, "session", None)
+            session_id = getattr(request.state, "session_id", None)
+            if session and session_id:
+                _enregistrer_session(session_id, session)
+    except (OSError, sqlite3.Error) as exc:
+        print(f"Restauration impossible : {exc!r}")
+        try:
+            _base.execute("SELECT 1")
+        except (sqlite3.Error, AttributeError):
+            _base = _ouvrir_connexion()
+        return erreur(
+            "La restauration a échoué ; la base actuelle a été conservée "
+            f"(copie de sécurité : {securite.name}).",
+            500,
+        )
+    finally:
+        shutil.rmtree(dossier_temporaire, ignore_errors=True)
+
+    return reponse(
+        {
+            "ok": True,
+            "sauvegarde_securite": securite.name,
+            "message": "Sauvegarde restaurée. Rechargez l'application.",
+        }
+    )
 
 
 # --------------------------------------------------------------------------

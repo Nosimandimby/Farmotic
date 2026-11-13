@@ -126,6 +126,36 @@ cd frontend && npm run dev      # interface à chaud sur :5173
 
 ---
 
+## 💾 Sauvegarde et restauration
+
+Depuis l'application : **Paramètres → Sauvegarde** (compte administrateur).
+
+- **Exporter la base** — télécharge une copie complète et cohérente de la base
+  sous un nom daté automatiquement, par exemple
+  `farmotic-database-2026-11-13.sqlite`. Le fichier obtenu est une base SQLite
+  standard : conservez-le sur une clé USB, un disque externe ou dans le cloud.
+- **Restaurer une sauvegarde** — choisissez un fichier `.sqlite` exporté
+  précédemment : l'application vérifie qu'il s'agit bien d'une base Farmotic,
+  enregistre une copie de la base *actuelle* dans
+  `data/database-avant-restauration-AAAA-MM-JJ-HHMMSS.sqlite`, puis la remplace.
+  La page se recharge automatiquement.
+
+Les deux opérations sont réservées aux administrateurs et nécessitent que
+l'application soit en ligne. En ligne de commande :
+
+```bash
+# export (cookie de session requis)
+curl -b cookies.txt -OJ http://127.0.0.1:3001/api/sauvegarde
+
+# restauration
+curl -b cookies.txt -X POST \
+  -H 'Content-Type: application/octet-stream' \
+  --data-binary @farmotic-database-2026-11-13.sqlite \
+  http://127.0.0.1:3001/api/sauvegarde/restauration
+```
+
+---
+
 ## 🔄 Migration depuis l'ancienne version Node.js
 
 Rien à faire côté données : `main.py` lit et écrit la même base SQLite avec les

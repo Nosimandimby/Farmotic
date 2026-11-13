@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   Coins,
+  Database,
+  Download,
   KeyRound,
   ListChecks,
   Lock,
@@ -9,9 +11,11 @@ import {
   Settings2,
   SlidersHorizontal,
   Trash2,
+  TriangleAlert,
+  Upload,
   User,
 } from 'lucide-react';
-import { api } from '../api.js';
+import { api, restaurerSauvegarde, telechargerSauvegarde } from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
 import { useToast } from '../components/Toast.jsx';
@@ -202,6 +206,13 @@ export default function Parametres() {
   });
   const [erreurMotDePasse, setErreurMotDePasse] = useState('');
 
+  const [exportEnCours, setExportEnCours] = useState(false);
+  const [fichierSauvegarde, setFichierSauvegarde] = useState(null);
+  const [confirmationRestauration, setConfirmationRestauration] = useState(false);
+  const [restaurationEnCours, setRestaurationEnCours] = useState(false);
+
+  const estAdmin = user?.role === 'admin';
+
   const charger = async () => {
     const data = await api.get('/parametres');
     setParametres(data);
@@ -288,6 +299,35 @@ export default function Parametres() {
     }
   };
 
+  const exporterSauvegarde = async () => {
+    setExportEnCours(true);
+    try {
+      const nom = await telechargerSauvegarde();
+      toast(`Sauvegarde exportée : ${nom}`);
+    } catch (error) {
+      toast(error.message, 'error');
+    } finally {
+      setExportEnCours(false);
+    }
+  };
+
+  const restaurer = async () => {
+    if (!fichierSauvegarde) return;
+    setRestaurationEnCours(true);
+    try {
+      const resultat = await restaurerSauvegarde(fichierSauvegarde);
+      toast(
+        `Sauvegarde restaurée. Copie de l’ancienne base : ${resultat.sauvegarde_securite}.`,
+      );
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (error) {
+      toast(error.message, 'error');
+      setConfirmationRestauration(false);
+    } finally {
+      setRestaurationEnCours(false);
+    }
+  };
+
   if (chargement) return <Loading />;
 
   const actifs = parametres.filter((parametre) => parametre.actif).length;
@@ -316,6 +356,9 @@ export default function Parametres() {
         items={[
           { value: 'suivi', label: 'Paramètres de suivi', icon: ListChecks },
           { value: 'preferences', label: 'Préférences', icon: SlidersHorizontal },
+          ...(estAdmin
+            ? [{ value: 'sauvegarde', label: 'Sauvegarde', icon: Database }]
+            : []),
           { value: 'compte', label: 'Mon compte', icon: User },
         ]}
         value={onglet}
@@ -631,6 +674,101 @@ export default function Parametres() {
         </div>
       )}
 
+      {onglet === 'sauvegarde' && estAdmin && (
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          <Card className="card-pad">
+            <div className="flex items-start gap-3">
+              <span className="rounded-xl bg-brand-50 p-2.5 text-brand-700">
+                <Download size={18} />
+              </span>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Exporter la base de données
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Télécharge le fichier SQLite complet (cycles, relevés, charges, ventes,
+                  comptes) sous un nom daté du jour, par exemple{' '}
+                  <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
+                    farmotic-database-{new Date().toISOString().slice(0, 10)}.sqlite
+                  </code>
+                  .
+                </p>
+                <div className="mt-4">
+                  <Button
+                    icon={Download}
+                    onClick={exporterSauvegarde}
+                    disabled={exportEnCours || !isOnline}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                  >
+                    {exportEnCours ? 'Préparation…' : 'Télécharger la sauvegarde'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="card-pad">
+            <div className="flex items-start gap-3">
+              <span className="rounded-xl bg-amber-50 p-2.5 text-amber-700">
+                <Upload size={18} />
+              </span>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Restaurer une sauvegarde
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Remplace toutes les données actuelles par le contenu du fichier choisi.
+                  Une copie de la base actuelle est conservée automatiquement dans le
+                  dossier <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">data/</code>.
+                </p>
+
+                <label
+                  htmlFor="fichier-sauvegarde"
+                  className="mt-4 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed border-slate-300 px-3.5 py-2.5 text-sm text-slate-600 hover:border-brand-400 hover:text-brand-700"
+                >
+                  <span className="truncate">
+                    {fichierSauvegarde
+                      ? fichierSauvegarde.name
+                      : 'Choisir un fichier .sqlite'}
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold uppercase tracking-wide">
+                    Parcourir
+                  </span>
+                </label>
+                <input
+                  id="fichier-sauvegarde"
+                  type="file"
+                  accept=".sqlite,.db,application/vnd.sqlite3,application/octet-stream"
+                  className="hidden"
+                  onChange={(event) =>
+                    setFichierSauvegarde(event.target.files?.[0] || null)
+                  }
+                />
+
+                <div className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+                  <TriangleAlert size={15} className="mt-0.5 shrink-0" />
+                  <p>
+                    Les données saisies depuis cette sauvegarde seront perdues. Les
+                    utilisateurs devront peut-être se reconnecter.
+                  </p>
+                </div>
+
+                <div className="mt-4">
+                  <Button
+                    icon={Upload}
+                    onClick={() => setConfirmationRestauration(true)}
+                    disabled={!fichierSauvegarde || restaurationEnCours || !isOnline}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                  >
+                    Restaurer les données
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {onglet === 'compte' && (
         <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_340px]">
           <Card>
@@ -773,6 +911,15 @@ export default function Parametres() {
           />
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={confirmationRestauration}
+        onClose={() => setConfirmationRestauration(false)}
+        onConfirm={restaurer}
+        loading={restaurationEnCours}
+        title="Restaurer cette sauvegarde ?"
+        message={`Toutes les données actuelles (cycles, relevés, charges, ventes) seront remplacées par le contenu de « ${fichierSauvegarde?.name} ». Une copie de la base actuelle est enregistrée dans le dossier data/.`}
+      />
 
       <ConfirmDialog
         open={Boolean(aSupprimer)}
