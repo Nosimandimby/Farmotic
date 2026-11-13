@@ -167,6 +167,53 @@ Seule la commande de lancement change : `python3 lancer.py`.
 
 ---
 
+## 🔁 Mises à jour
+
+L'application est installée depuis le dépôt Git : mettre à jour consiste à
+récupérer les derniers commits, réinstaller les dépendances Python si
+`requirements.txt` a changé, recompiler l'interface si `frontend/` a changé, puis
+redémarrer le serveur.
+
+### Depuis l'application (recommandé)
+
+**Paramètres → À propos** affiche la version installée, lue dans le **tag Git**
+le plus proche (`git describe`, par exemple `v2.1.0-2-gc7fcd62` → version
+**2.1.0**), ainsi que la branche, le commit et la date du code. Hors dépôt Git,
+la version retombe sur celle de `package.json`. Le bouton **Vérifier les mises à jour**
+interroge le dépôt distant ; si une version plus récente existe, un bouton
+**Mettre à jour** (administrateurs) l'installe puis **redémarre le serveur
+automatiquement** — la page se recharge seule. Aucune commande à taper.
+
+La mise à jour est refusée si des fichiers suivis par Git ont été modifiés
+localement (validez-les d'abord) ; vos données (`data/`) ne sont jamais
+touchées.
+
+### En ligne de commande
+
+```bash
+python3 mettre_a_jour.py              # vérifie et applique la mise à jour
+python3 mettre_a_jour.py --verifier   # affiche seulement l'état
+python3 mettre_a_jour.py --sans-interface  # sans recompiler l'interface
+```
+
+Après une mise à jour en ligne de commande, relancez l'application à la main
+(`python3 lancer.py`).
+
+### API
+
+| Méthode | Route | Rôle |
+| --- | --- | --- |
+| `GET` | `/api/version` | version installée, branche, commit, Python (connecté) |
+| `GET` | `/api/maj/verifier` | état des mises à jour (administrateur) |
+| `POST` | `/api/maj/appliquer` | installe et redémarre (administrateur) |
+
+Pour publier une nouvelle version : créez un tag annoté (`git tag -a v2.2.0 -m
+"Farmotic 2.2.0"`), alignez si vous le souhaitez le champ `version` de
+`package.json`, puis poussez le tout (`git push origin main --tags`). Les
+installations se mettront à jour d'elles-mêmes depuis l'interface.
+
+---
+
 ## 🍓 Raspberry Pi (arm64) et autres machines
 
 Farmotic tourne sur un Raspberry Pi sans compilation native : SQLite est fourni
@@ -249,6 +296,8 @@ utilisez Caddy ou Nginx en reverse-proxy vers `http://localhost:3001`.
 ```
 main.py             API FastAPI (toutes les routes /api + service de l'interface)
 lancer.py           lanceur : dépendances, port libre, Uvicorn, navigateur
+maj.py              vérification et installation des mises à jour (stdlib)
+mettre_a_jour.py    script de mise à jour en ligne de commande
 dev.sh              lancement en développement (API Python + Vite)
 requirements.txt    dépendances Python
 frontend/           interface React (src/) compilée dans dist/

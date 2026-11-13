@@ -3,11 +3,15 @@ import {
   Coins,
   Database,
   Download,
+  DownloadCloud,
+  GitBranch,
+  Info,
   KeyRound,
   ListChecks,
   Lock,
   Pencil,
   Plus,
+  RefreshCw,
   Settings2,
   SlidersHorizontal,
   Trash2,
@@ -211,6 +215,13 @@ export default function Parametres() {
   const [confirmationRestauration, setConfirmationRestauration] = useState(false);
   const [restaurationEnCours, setRestaurationEnCours] = useState(false);
 
+  const [infosVersion, setInfosVersion] = useState(null);
+  const [etatMaj, setEtatMaj] = useState(null);
+  const [verificationMaj, setVerificationMaj] = useState(false);
+  const [applicationMaj, setApplicationMaj] = useState(false);
+  const [confirmationMaj, setConfirmationMaj] = useState(false);
+  const [redemarrage, setRedemarrage] = useState(false);
+
   const estAdmin = user?.role === 'admin';
 
   const charger = async () => {
@@ -240,6 +251,22 @@ export default function Parametres() {
       poids_moyen_j45_kg: settings.poids_moyen_j45_kg ?? 2.5,
     });
   }, [settings]);
+
+  useEffect(() => {
+    if (onglet !== 'apropos' || infosVersion) return undefined;
+    let actif = true;
+    api.get('/version')
+      .then((infos) => {
+        if (actif) setInfosVersion(infos);
+      })
+      .catch((error) => {
+        if (actif) toast(error.message, 'error');
+      });
+    return () => {
+      actif = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onglet, infosVersion]);
 
   const basculerActif = async (parametre) => {
     try {
@@ -328,6 +355,65 @@ export default function Parametres() {
     }
   };
 
+  const verifierMaj = async () => {
+    setVerificationMaj(true);
+    setEtatMaj(null);
+    try {
+      const etat = await api.get('/maj/verifier');
+      setEtatMaj(etat);
+      if (etat.erreur) {
+        toast(etat.erreur, 'error');
+      } else if (etat.a_jour) {
+        toast('Farmotic est à jour.');
+      } else {
+        toast(`Nouvelle version disponible : ${etat.version_disponible}.`);
+      }
+    } catch (error) {
+      toast(error.message, 'error');
+    } finally {
+      setVerificationMaj(false);
+    }
+  };
+
+  const attendreRedemarrage = async () => {
+    setRedemarrage(true);
+    for (let essai = 0; essai < 60; essai += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      try {
+        await api.get('/version');
+        window.location.reload();
+        return;
+      } catch {
+        // Le serveur est en cours de redémarrage : on réessaie.
+      }
+    }
+    setRedemarrage(false);
+    toast('Le serveur ne répond pas. Relancez Farmotic manuellement.', 'error');
+  };
+
+  const appliquerMaj = async () => {
+    setConfirmationMaj(false);
+    setApplicationMaj(true);
+    try {
+      const resultat = await api.post('/maj/appliquer');
+      if (!resultat.applique) {
+        toast(resultat.message || 'Aucune mise à jour à appliquer.');
+        setEtatMaj(null);
+        return;
+      }
+      toast(`Version ${resultat.version} installée. Redémarrage…`);
+      for (const avertissement of resultat.avertissements || []) {
+        toast(avertissement, 'error');
+      }
+      await attendreRedemarrage();
+      setEtatMaj(null);
+    } catch (error) {
+      toast(error.message, 'error');
+    } finally {
+      setApplicationMaj(false);
+    }
+  };
+
   if (chargement) return <Loading />;
 
   const actifs = parametres.filter((parametre) => parametre.actif).length;
@@ -359,6 +445,7 @@ export default function Parametres() {
           ...(estAdmin
             ? [{ value: 'sauvegarde', label: 'Sauvegarde', icon: Database }]
             : []),
+          { value: 'apropos', label: 'À propos', icon: Info },
           { value: 'compte', label: 'Mon compte', icon: User },
         ]}
         value={onglet}
@@ -769,6 +856,154 @@ export default function Parametres() {
         </div>
       )}
 
+      {onglet === 'apropos' && (
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          <Card className="card-pad">
+            <div className="flex items-start gap-3">
+              <span className="rounded-xl bg-brand-50 p-2.5 text-brand-700">
+                <Info size={18} />
+              </span>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-slate-900">Farmotic</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Suivi d’élevage de poulets de chair — interface React et API Python.
+                </p>
+                <p className="mt-4 text-3xl font-bold text-slate-900">
+                  version {infosVersion?.version || '—'}
+                </p>
+                {infosVersion?.describe && (
+                  <p className="mt-1 font-mono text-xs text-slate-400">
+                    {infosVersion.describe}
+                  </p>
+                )}
+
+                <dl className="mt-4 space-y-1.5 text-sm text-slate-500">
+                  {infosVersion?.branche && (
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="flex items-center gap-1.5">
+                        <GitBranch size={14} /> Branche
+                      </dt>
+                      <dd className="font-semibold text-slate-800">
+                        {infosVersion.branche}
+                        {infosVersion.commit_court ? ` · ${infosVersion.commit_court}` : ''}
+                      </dd>
+                    </div>
+                  )}
+                  {infosVersion?.date_commit && (
+                    <div className="flex items-center justify-between gap-3">
+                      <dt>Date du code</dt>
+                      <dd className="font-semibold text-slate-800">
+                        {new Date(infosVersion.date_commit).toLocaleDateString('fr-FR')}
+                      </dd>
+                    </div>
+                  )}
+                  {infosVersion?.python && (
+                    <div className="flex items-center justify-between gap-3">
+                      <dt>Python</dt>
+                      <dd className="font-semibold text-slate-800">{infosVersion.python}</dd>
+                    </div>
+                  )}
+                  {infosVersion?.version_source && (
+                    <div className="flex items-center justify-between gap-3">
+                      <dt>Version lue dans</dt>
+                      <dd className="font-semibold text-slate-800">
+                        {infosVersion.version_source}
+                      </dd>
+                    </div>
+                  )}
+                  {infosVersion?.dossier && (
+                    <div className="flex items-center justify-between gap-3">
+                      <dt>Dossier</dt>
+                      <dd className="max-w-[60%] truncate font-mono text-xs text-slate-700">
+                        {infosVersion.dossier}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+
+                <p className="mt-4 text-xs leading-relaxed text-slate-400">
+                  Données enregistrées localement dans data/database.sqlite. Pensez à
+                  exporter régulièrement une sauvegarde.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="card-pad">
+            <div className="flex items-start gap-3">
+              <span className="rounded-xl bg-brand-50 p-2.5 text-brand-700">
+                <RefreshCw size={18} />
+              </span>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-slate-900">Mises à jour</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Vérifie si une nouvelle version est publiée sur le dépôt, puis
+                  l’installe sans passer par le terminal.
+                </p>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    icon={RefreshCw}
+                    onClick={verifierMaj}
+                    disabled={verificationMaj || !isOnline || redemarrage}
+                    title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                  >
+                    {verificationMaj ? 'Vérification…' : 'Vérifier les mises à jour'}
+                  </Button>
+                  {estAdmin && etatMaj?.a_jour === false && (
+                    <Button
+                      icon={DownloadCloud}
+                      onClick={() => setConfirmationMaj(true)}
+                      disabled={applicationMaj || redemarrage || !isOnline}
+                      title={!isOnline ? MESSAGE_INDISPONIBLE_HORS_LIGNE : undefined}
+                    >
+                      {applicationMaj ? 'Installation…' : 'Mettre à jour'}
+                    </Button>
+                  )}
+                </div>
+
+                {redemarrage && (
+                  <p className="mt-4 rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2.5 text-sm text-brand-800">
+                    Mise à jour appliquée, redémarrage du serveur… La page se rechargera
+                    automatiquement.
+                  </p>
+                )}
+
+                {etatMaj && !redemarrage && (
+                  <div
+                    className={`mt-4 rounded-xl border px-3.5 py-2.5 text-sm ${
+                      etatMaj.erreur
+                        ? 'border-rose-200 bg-rose-50 text-rose-700'
+                        : etatMaj.a_jour
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                          : 'border-amber-200 bg-amber-50 text-amber-800'
+                    }`}
+                  >
+                    {etatMaj.erreur ? (
+                      etatMaj.erreur
+                    ) : etatMaj.a_jour ? (
+                      <>Vous utilisez la dernière version ({etatMaj.version}).</>
+                    ) : (
+                      <>
+                        Version <strong>{etatMaj.version_disponible}</strong> disponible{' '}
+                        ({etatMaj.commits_en_attente} modification(s)).
+                        {!estAdmin && ' Seul un administrateur peut l’installer.'}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <p className="mt-4 text-xs leading-relaxed text-slate-400">
+                  La mise à jour récupère le code depuis le dépôt Git, réinstalle les
+                  dépendances si nécessaire et recompile l’interface (Node.js requis).
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {onglet === 'compte' && (
         <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_340px]">
           <Card>
@@ -911,6 +1146,15 @@ export default function Parametres() {
           />
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={confirmationMaj}
+        onClose={() => setConfirmationMaj(false)}
+        onConfirm={appliquerMaj}
+        loading={applicationMaj}
+        title="Installer la mise à jour ?"
+        message={`Farmotic va récupérer la version ${etatMaj?.version_disponible || ''} depuis le dépôt Git, réinstaller les dépendances si besoin et recompiler l’interface. Le serveur redémarre ensuite automatiquement ; vos données ne sont pas modifiées.`}
+      />
 
       <ConfirmDialog
         open={confirmationRestauration}

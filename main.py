@@ -39,6 +39,14 @@ from typing import Any, Iterator
 from urllib.parse import quote, unquote
 
 import bcrypt
+
+from maj import (
+    ErreurMiseAJour,
+    appliquer_mise_a_jour,
+    info_application,
+    redemarrer,
+    verifier_mise_a_jour,
+)
 from fastapi import Body, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from starlette.background import BackgroundTask
@@ -2816,6 +2824,36 @@ async def restaurer_sauvegarde(
             "message": "Sauvegarde restaurée. Rechargez l'application.",
         }
     )
+
+
+# --------------------------------------------------------------------------
+# Version installée et mises à jour
+# --------------------------------------------------------------------------
+
+
+@app.get("/api/version")
+def version_application(_: dict = Depends(session_requise)):
+    return reponse(info_application())
+
+
+@app.get("/api/maj/verifier")
+def verifier_maj(_: dict = Depends(administrateur_requis)):
+    return reponse(verifier_mise_a_jour())
+
+
+@app.post("/api/maj/appliquer")
+def appliquer_maj(_: dict = Depends(administrateur_requis)):
+    try:
+        resultat = appliquer_mise_a_jour()
+    except ErreurMiseAJour as erreur:
+        return JSONResponse({"error": str(erreur)}, status_code=400)
+
+    if resultat.get("applique"):
+        # Le nouveau code n'est chargé qu'au prochain démarrage : on relance le
+        # processus une fois la réponse envoyée.
+        redemarrer()
+        resultat["redemarrage"] = True
+    return reponse(resultat)
 
 
 # --------------------------------------------------------------------------
