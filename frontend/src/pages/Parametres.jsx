@@ -879,14 +879,7 @@ export default function Parametres() {
                   </p>
                 )}
 
-                <dl className="mt-4 space-y-1.5 text-sm text-slate-500">
-                  {infosVersion?.branche && (
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="flex items-center gap-1.5">
-                        <GitBranch size={14} /> Branche
-                      </dt>
-                      <dd className="font-semibold text-slate-800">
-                        {infosVersion.branche}
+                
                         {infosVersion.commit_court ? ` · ${infosVersion.commit_court}` : ''}
                       </dd>
                     </div>
