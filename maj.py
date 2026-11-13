@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Any
 
 RACINE = Path(__file__).resolve().parent
-FICHIER_VERSION = RACINE / "package.json"  # secours si l'installation n'est pas un dépôt Git
+FICHIER_VERSION = RACINE / "frontend" / "package.json"  # secours si l'installation n'est pas un dépôt Git
 # Fichiers de verrouillage régénérés automatiquement par npm : s'ils sont les
 # seuls fichiers modifiés localement, on les remet dans l'état du dépôt au lieu
 # de bloquer la mise à jour (ils sont reconstruits par `npm install`).
@@ -273,12 +273,13 @@ def _node_trop_ancien(version: str | None) -> bool:
     return bool(correspondance) and int(correspondance.group(1)) < 20
 
 
-def _executer_npm(arguments: list[str], delai: int) -> tuple[bool, str]:
+def _executer_npm(arguments: list[str], delai: int, cwd: Path | None = None) -> tuple[bool, str]:
     """Exécute une commande npm ; renvoie (succès, dernier message d'erreur)."""
+    cwd_arg = cwd if cwd is not None else RACINE
     try:
         resultat = subprocess.run(
             ["npm", *arguments],
-            cwd=RACINE,
+            cwd=cwd_arg,
             capture_output=True,
             text=True,
             timeout=delai,
@@ -301,14 +302,15 @@ def _installer_dependances_node(verrou_modifie: bool) -> str | None:
     synchronisé avec `package.json` ; si ce n'est pas le cas, on retente avec
     `npm install` plutôt que d'abandonner.
     """
+    répertoire_npm = RACINE / "frontend"
     if verrou_modifie:
         succes, detail = _executer_npm(
-            ["ci", "--no-audit", "--no-fund"], DELAI_INSTALLATION_NODE
+            ["ci", "--no-audit", "--no-fund"], DELAI_INSTALLATION_NODE, cwd=répertoire_npm
         )
         if succes:
             return None
         succes, detail_install = _executer_npm(
-            ["install", "--no-audit", "--no-fund"], DELAI_INSTALLATION_NODE
+            ["install", "--no-audit", "--no-fund"], DELAI_INSTALLATION_NODE, cwd=répertoire_npm
         )
         if succes:
             return None
@@ -319,7 +321,7 @@ def _installer_dependances_node(verrou_modifie: bool) -> str | None:
         )
 
     succes, detail = _executer_npm(
-        ["install", "--no-audit", "--no-fund"], DELAI_INSTALLATION_NODE
+        ["install", "--no-audit", "--no-fund"], DELAI_INSTALLATION_NODE, cwd=répertoire_npm
     )
     if succes:
         return None
@@ -337,13 +339,14 @@ def _recompiler_interface(fichiers: set[str]) -> str | None:
             "machine. Installez Node.js 20+ puis relancez la mise à jour."
         )
 
+    répertoire_npm = RACINE / "frontend"
     verrou_modifie = bool(
         fichiers & {"package-lock.json", "frontend/package-lock.json"}
     )
     dependances_modifiees = verrou_modifie or bool(
-        fichiers & {"package.json", "frontend/package.json"}
+        fichiers & {"frontend/package.json"}
     )
-    if dependances_modifiees or not (RACINE / "node_modules").is_dir():
+    if dependances_modifiees or not (répertoire_npm / "node_modules").is_dir():
         avertissement = _installer_dependances_node(verrou_modifie)
         if avertissement:
             return avertissement
@@ -353,7 +356,7 @@ def _recompiler_interface(fichiers: set[str]) -> str | None:
     try:
         resultat = subprocess.run(
             commande,
-            cwd=RACINE,
+            cwd=répertoire_npm,
             capture_output=True,
             text=True,
             timeout=DELAI_COMPILATION,
@@ -444,7 +447,7 @@ def appliquer_mise_a_jour(recompiler_interface: bool = True) -> dict[str, Any]:
             avertissements.append(avertissement)
     if recompiler_interface and (
         any(chemin.startswith("frontend/") for chemin in fichiers)
-        or "package.json" in fichiers
+        or "frontend/package.json" in fichiers
     ):
         avertissement = _recompiler_interface(fichiers)
         if avertissement:
