@@ -1154,6 +1154,9 @@ export default function Parametres() {
         onClose={() => setConfirmationMaj(false)}
         onConfirm={appliquerMaj}
         loading={applicationMaj}
+        confirmLabel="Mettre à jour"
+        confirmVariant="primary"
+        loadingLabel="Installation…"
         title="Installer la mise à jour ?"
         message={`Farmotic va récupérer la version ${etatMaj?.version_disponible || ''} depuis le dépôt Git, réinstaller les dépendances si besoin et recompiler l’interface. Le serveur redémarre ensuite automatiquement ; vos données ne sont pas modifiées.`}
       />
@@ -1163,6 +1166,9 @@ export default function Parametres() {
         onClose={() => setConfirmationRestauration(false)}
         onConfirm={restaurer}
         loading={restaurationEnCours}
+        confirmLabel="Restaurer"
+        confirmVariant="primary"
+        loadingLabel="Restauration…"
         title="Restaurer cette sauvegarde ?"
         message={`Toutes les données actuelles (cycles, relevés, charges, ventes) seront remplacées par le contenu de « ${fichierSauvegarde?.name} ». Une copie de la base actuelle est enregistrée dans le dossier data/.`}
       />

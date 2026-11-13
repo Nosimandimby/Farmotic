@@ -33,6 +33,11 @@ from typing import Any
 
 RACINE = Path(__file__).resolve().parent
 FICHIER_VERSION = RACINE / "package.json"  # secours si l'installation n'est pas un dépôt Git
+# Fichiers de verrouillage régénérés automatiquement par npm : s'ils sont les
+# seuls fichiers modifiés localement, on les remet dans l'état du dépôt au lieu
+# de bloquer la mise à jour (ils sont reconstruits par `npm install`).
+FICHIERS_REGENERABLES = ("package-lock.json", "frontend/package-lock.json")
+
 DELAI_GIT = 60
 DELAI_INSTALLATION = 300
 DELAI_INSTALLATION_NODE = 1800
@@ -142,10 +147,10 @@ def branche_courante() -> str:
 def modifications_locales() -> list[str]:
     """Fichiers suivis modifiés localement (ils bloqueraient `git pull`)."""
     try:
-        sortie = _git("status", "--porcelain", "--untracked-files=no")
+        sortie = _git("diff", "--name-only", "HEAD")
     except ErreurMiseAJour:
         return []
-    return [ligne[3:] for ligne in sortie.splitlines() if ligne.strip()]
+    return [ligne.strip() for ligne in sortie.splitlines() if ligne.strip()]
 
 
 def info_application() -> dict[str, Any]:
@@ -394,12 +399,18 @@ def appliquer_mise_a_jour(recompiler_interface: bool = True) -> dict[str, Any]:
         }
 
     locales = etat.get("modifications_locales") or []
-    if locales:
-        liste = ", ".join(locales[:5]) + ("…" if len(locales) > 5 else "")
+    bloquants = [fichier for fichier in locales if fichier not in FICHIERS_REGENERABLES]
+    if bloquants:
+        liste = ", ".join(bloquants[:5]) + ("…" if len(bloquants) > 5 else "")
         raise ErreurMiseAJour(
             "Des modifications locales non validées empêchent la mise à jour "
             f"({liste}). Validez-les avec Git puis réessayez."
         )
+    if locales:
+        # Seuls des fichiers de verrouillage ont été modifiés : on les remet dans
+        # l'état du dépôt (ils seront régénérés par npm) pour permettre le pull.
+        _git("checkout", "--", *locales)
+    fichiers_retablis = list(locales)
 
     ancienne_version = etat["version"]
     ancien_commit = etat["commit"]
@@ -421,6 +432,12 @@ def appliquer_mise_a_jour(recompiler_interface: bool = True) -> dict[str, Any]:
     )
 
     avertissements: list[str] = []
+    if fichiers_retablis:
+        avertissements.append(
+            "Fichier(s) de verrouillage local(aux) ignoré(s) puis régénéré(s) : "
+            + ", ".join(fichiers_retablis)
+            + "."
+        )
     if "requirements.txt" in fichiers:
         avertissement = _installer_dependances()
         if avertissement:

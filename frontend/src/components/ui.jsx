@@ -196,7 +196,9 @@ export function ConfirmDialog({
   title = 'Confirmer la suppression',
   message,
   confirmLabel = 'Supprimer',
+  confirmVariant = 'danger',
   loading = false,
+  loadingLabel = 'Traitement…',
 }) {
   return (
     <Modal
@@ -209,8 +211,8 @@ export function ConfirmDialog({
           <Button variant="secondary" onClick={onClose} disabled={loading}>
             Annuler
           </Button>
-          <Button variant="danger" onClick={onConfirm} disabled={loading}>
-            {loading ? 'Suppression…' : confirmLabel}
+          <Button variant={confirmVariant} onClick={onConfirm} disabled={loading}>
+            {loading ? loadingLabel : confirmLabel}
           </Button>
         </>
       }
