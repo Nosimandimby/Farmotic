@@ -2,16 +2,21 @@
 node_modules/
 .venv/
 venv/
+env/
 __pycache__/
 *.py[cod]
+*.so
 
 # 2. Dossiers de compilation et temporaires
 build/
+frontend/dist/
 tmp/
 .freebuff/
 
 # 3. Base de données / Données locales
 data/
+*.sqlite
+*.db
 
 # 4. Outils locaux spécifiques à votre machine
 .tools/
@@ -25,6 +30,7 @@ config.local.json
 Thumbs.db
 .vscode/
 .idea/
+*.swp
 
 # 7. Logs
 *.log
