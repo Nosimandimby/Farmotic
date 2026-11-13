@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Farmotic — lanceur Python (équivalent de l'ancien start.sh).
+"""Farmotic — lanceur Python (unique point d'entrée de l'application).
 
 Vérifie les dépendances, les installe si besoin (dans un environnement virtuel
 local `.venv` si le Python du système l'interdit), démarre le serveur FastAPI

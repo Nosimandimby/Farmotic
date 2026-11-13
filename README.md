@@ -70,8 +70,8 @@ FARMOTIC_NO_OPEN=1 python3 lancer.py  # ne pas ouvrir le navigateur
 python3 lancer.py --no-open           # idem, en argument
 ```
 
-`./start.sh` est conservé : il ne fait plus qu'appeler `lancer.py` (pratique
-pour les unités systemd et les habitudes).
+Il n'y a plus de script `start.sh` : `lancer.py` est l'unique point d'entrée,
+y compris pour les unités systemd (voir la section Raspberry Pi).
 
 Sous Windows, ces variables s'utilisent dans l'invite de commandes :
 
@@ -133,7 +133,7 @@ mêmes requêtes SQL, expose exactement les mêmes routes `/api/…` avec les m�
 corps JSON, et signe le cookie `farmotic.sid` de la même manière. Les
 utilisateurs déjà connectés le restent après le basculement.
 
-Seule la commande de lancement change : `python3 lancer.py` (ou `./start.sh`).
+Seule la commande de lancement change : `python3 lancer.py`.
 
 ---
 
@@ -220,7 +220,6 @@ utilisez Caddy ou Nginx en reverse-proxy vers `http://localhost:3001`.
 main.py             API FastAPI (toutes les routes /api + service de l'interface)
 lancer.py           lanceur : dépendances, port libre, Uvicorn, navigateur
 dev.sh              lancement en développement (API Python + Vite)
-start.sh            lanceur de compatibilité (délègue à lancer.py)
 requirements.txt    dépendances Python
 frontend/           interface React (src/) compilée dans dist/
 build/              interface compilée prête à servir (build/public)
