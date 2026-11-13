@@ -177,13 +177,13 @@ After=network.target
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/Farmotic
+User=votre_nom_d_utilisateur
+Group=votre_nom_d_utilisateur
+WorkingDirectory=/home/votre_nom_d_utilisateur/Farmotic
 Environment=HOST=0.0.0.0
 Environment=PORT=3001
 Environment=FARMOTIC_NO_OPEN=1
-ExecStart=/usr/bin/python3 /home/pi/Farmotic/lancer.py
+ExecStart=/home/votre_nom_d_utilisateur/Farmotic/.venv/bin/python3 /home/votre_nom_d_utilisateur/Farmotic/lancer.py
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
